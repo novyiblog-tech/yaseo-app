@@ -22,7 +22,7 @@ from decimal import Decimal
 
 import psycopg
 
-from yaseo_app import db
+from yaseo_app import db, legal
 from yaseo_app.accounts import Refused
 
 PERIOD = timedelta(days=30)
@@ -59,8 +59,11 @@ def current(conn: psycopg.Connection, user: dict) -> dict:
         sub["period_end"] > now
         or (sub["status"] == "past_due" and sub["period_end"] + GRACE > now))
     if live:
-        return {"plan": plan(conn, sub["plan"]), "sub": sub,
-                "start": sub["period_start"], "end": sub["period_end"]}
+        p = plan(conn, sub["plan"])
+        # Бесплатные по сути тарифы (бета) считают проверки в скользящем окне, как free.
+        start = now - timedelta(days=p["free_every_days"] or 30) if p["period"] == "free" \
+            else sub["period_start"]
+        return {"plan": p, "sub": sub, "start": start, "end": sub["period_end"]}
     free = plan(conn, "free")
     days = timedelta(days=free["free_every_days"] or 30)
     return {"plan": free, "sub": sub, "start": now - days, "end": None}
@@ -100,7 +103,7 @@ def audit_allowance(conn: psycopg.Connection, user: dict, site_url: str | None =
     """Лимиты, с которыми ставится проверка. Нет попыток — отказ с понятной причиной."""
     cur = current(conn, user)
     p, used = cur["plan"], usage(conn, user, cur)
-    if p["period"] == "free" and site_url:
+    if p["code"] == "free" and site_url:
         # Бесплатная проверка — одна на домен на все кабинеты: десять регистраций
         # не дают десять бесплатных проверок одного сайта.
         from yaseo_app.sources import host
@@ -114,8 +117,11 @@ def audit_allowance(conn: psycopg.Connection, user: dict, site_url: str | None =
                           f"{p['free_every_days']} дней. Полная проверка — на платном тарифе.")
     if _left(p["audits_per_period"], used["audits"]) == 0:
         if p["period"] == "free":
-            raise Refused(f"Бесплатная проверка — раз в {p['free_every_days']} дней. "
-                          "Следующую можно раньше на платном тарифе.")
+            n = p["audits_per_period"]
+            raise Refused((f"Бесплатная проверка — раз в {p['free_every_days']} дней. " if n == 1
+                           else f"По тарифу «{p['title']}» — {n} проверок за "
+                                f"{p['free_every_days']} дней, они закончились. ")
+                          + "Следующую можно раньше на платном тарифе.")
         raise Refused(f"Проверки по тарифу «{p['title']}» на этот период закончились.")
     return {"plan": p["code"],
             "queries": p["queries_per_audit"],
@@ -190,6 +196,10 @@ def provider(conn: psycopg.Connection) -> Provider:
     name = os.environ.get("YASEO_PAYMENTS", "fake")
     if name == "fake":
         return FakeProvider(conn)
+    if not legal.complete():
+        # Настоящие деньги — только когда в оферте есть реквизиты исполнителя.
+        raise ValueError("реквизиты оферты не заполнены: "
+                         + ", ".join(legal.requisites()["missing"]))
     raise ValueError(f"платёжный сервис «{name}» не подключён: нужны ИП, магазин и ключи")
 
 
@@ -206,9 +216,10 @@ def start_purchase(conn: psycopg.Connection, user: dict, plan_code: str, prov: P
     if cur["plan"]["code"] == p["code"] and p["period"] == "month":
         raise Refused("Этот тариф у вас уже действует.")
     pay = conn.execute(
-        "INSERT INTO payments (user_id, plan, amount_rub, purpose, provider, idempotence_key)"
-        " VALUES (%s, %s, %s, 'purchase', %s, %s) RETURNING *",
-        (user["id"], p["code"], p["price_rub"], prov.name, secrets.token_hex(16)),
+        "INSERT INTO payments (user_id, plan, amount_rub, purpose, provider, idempotence_key,"
+        " offer_version) VALUES (%s, %s, %s, 'purchase', %s, %s, %s) RETURNING *",
+        (user["id"], p["code"], p["price_rub"], prov.name, secrets.token_hex(16),
+         legal.OFFER_VERSION),
     ).fetchone()
     pid, url = prov.create(pay, return_url.replace("{payment}", str(pay["id"])))
     conn.execute("UPDATE payments SET provider_id = %s WHERE id = %s", (pid, pay["id"]))

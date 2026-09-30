@@ -20,7 +20,7 @@
         <div class="muted small">Сейчас</div>
         <h2 style="margin:4px 0 6px">{{ p.title }}</h2>
         <p class="muted small">
-        {% if p.period == 'free' %}Одна проверка раз в {{ p.free_every_days }} дней, первые {{ p.steps_shown }} шага из списка.
+        {% if p.period == 'free' %}{% if p.audits_per_period == 1 %}Одна проверка{% else %}{{ p.audits_per_period }} проверок{% endif %} за {{ p.free_every_days }} дней, первые {{ p.steps_shown }} шага из списка.{% if cur.sub and cur.end %} Действует до {{ cur.end|dt }}.{% endif %}
         {% elif cur.sub.status == 'past_due' %}Не удалось списать оплату. Повторим в течение трёх дней, потом тариф станет бесплатным.
         {% elif p.period == 'once' %}Действует до {{ cur.end|dt }}, без продления.
         {% elif cur.sub.auto_renew %}Продлится {{ cur.end|dt }} на {{ p.price_rub|rub }}.
@@ -70,6 +70,8 @@
       {% endfor %}
     </div>
   </section>
+
+  <p class="muted small">Нажимая «Купить» или «Подключить», вы принимаете <a href="/legal/offer">оферту</a>. Ежемесячный тариф продлевается автоматически с той же карты — отключить продление можно здесь в любой момент, доступ сохранится до конца оплаченного периода.</p>
 
   {% if payments %}
   <section class="card table-scroll">

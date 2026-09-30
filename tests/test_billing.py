@@ -13,7 +13,7 @@ PASSWORD = "длинный-пароль-1"
 
 
 def signup(test, c, email):
-    c.post("/signup", data={"email": email, "password": PASSWORD, "consent": "yes"})
+    c.post("/signup", data={"email": email, "password": PASSWORD, "consent": "yes", "offer": "yes"})
     test.conn.execute("UPDATE users SET email_confirmed_at = now() WHERE email = %s", (email,))
 
 

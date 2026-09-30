@@ -23,7 +23,7 @@ class VerifyTest(PgTestCase):
         cls.app = web.create_app(cls.dsn, allow_private=True, secure_cookies=False)
 
     def signup(self, c, email="a@t.ru"):
-        return c.post("/signup", data={"email": email, "password": PASSWORD, "consent": "yes"})
+        return c.post("/signup", data={"email": email, "password": PASSWORD, "consent": "yes", "offer": "yes"})
 
     def test_unconfirmed_cannot_check_or_buy(self):
         u = accounts.signup(self.conn, "x@t.ru", PASSWORD, True)

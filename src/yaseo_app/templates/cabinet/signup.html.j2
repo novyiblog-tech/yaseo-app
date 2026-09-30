@@ -16,8 +16,10 @@
       <input id="email" type="email" name="email" value="{{ email or '' }}" autocomplete="email" required></div>
     <div class="field"><label for="password">Пароль, не короче 10 знаков</label>
       <input id="password" type="password" name="password" autocomplete="new-password" minlength="10" required></div>
+    <label class="check"><input type="checkbox" name="offer" value="yes" required>
+      <span>Принимаю условия <a href="/legal/offer" target="_blank" rel="noopener">оферты</a>.</span></label>
     <label class="check"><input type="checkbox" name="consent" value="yes" required>
-      <span>Даю согласие на обработку персональных данных — почты и адресов сайтов — для работы сервиса.</span></label>
+      <span>Даю согласие на обработку персональных данных — почты и адресов сайтов — для работы сервиса по <a href="/legal/privacy" target="_blank" rel="noopener">политике</a>.</span></label>
     <p style="margin-top:22px"><button class="btn" type="submit">Создать кабинет</button></p>
   </form>
 </div>

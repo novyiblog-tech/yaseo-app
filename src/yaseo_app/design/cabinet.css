@@ -168,3 +168,10 @@ tr:last-child td { border-bottom: 0; }
   .l-sample { transform: none; }
 }
 @media (prefers-reduced-motion: reduce) { .l-sample { transition: none; } }
+
+/* правовые документы */
+.doc { max-width: 72ch; }
+.doc h1 { font-size: clamp(26px, 3.4vw, 36px); text-transform: none; margin: 18px 0 6px; }
+.doc h2 { font-size: 18px; margin: 30px 0 10px; }
+.doc p { margin: 0 0 10px; color: var(--ink); }
+.doc p.muted { color: var(--ink-2); }

@@ -24,7 +24,9 @@ from yaseo_app import db, mailer
 from yaseo_app.accounts import EMAIL_RE, Refused, normalize_email
 
 HERE = Path(__file__).parent
-ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # без 0/O и 1/I — не путаются при вводе
+ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+# Сергей, 30.09.2026: участники беты — на бесплатном, 5 проверок в 30 дней (тариф beta).
+BETA_PLAN, BETA_DAYS = "beta", 90  # без 0/O и 1/I — не путаются при вводе
 
 
 def enabled() -> bool:
@@ -42,7 +44,7 @@ def normalize_code(code: str) -> str:
 
 
 def create(conn: psycopg.Connection, count: int = 1, uses: int = 1, note: str | None = None,
-           plan: str | None = None, days: int | None = None,
+           plan: str | None = BETA_PLAN, days: int | None = BETA_DAYS,
            valid_days: int | None = 60) -> list[str]:
     codes = []
     for _ in range(count):
@@ -98,8 +100,8 @@ def join_waitlist(conn: psycopg.Connection, email: str, site: str | None, consen
         (email, (site or "")[:300] or None, (source or "")[:100] or None))
 
 
-def send_invites(conn: psycopg.Connection, limit: int, uses: int = 1, plan: str | None = None,
-                 days: int | None = None) -> int:
+def send_invites(conn: psycopg.Connection, limit: int, uses: int = 1,
+                 plan: str | None = BETA_PLAN, days: int | None = BETA_DAYS) -> int:
     """Письма с кодом первым из листа ожидания. Каждому — свой одноразовый код."""
     base = os.environ.get("YASEO_BASE_URL", "http://127.0.0.1:8000")
     env = Environment(loader=FileSystemLoader(HERE / "templates"),
@@ -127,15 +129,15 @@ def main(argv: list[str] | None = None) -> int:
     inv.add_argument("--count", type=int, default=1)
     inv.add_argument("--uses", type=int, default=1)
     inv.add_argument("--note")
-    inv.add_argument("--plan", help="тариф, который даёт код (например pro)")
-    inv.add_argument("--days", type=int, help="на сколько дней даётся тариф")
+    inv.add_argument("--plan", default=BETA_PLAN, help="тариф, который даёт код")
+    inv.add_argument("--days", type=int, default=BETA_DAYS, help="на сколько дней даётся тариф")
     inv.add_argument("--valid-days", type=int, default=60, help="срок жизни кода")
     sub.add_parser("list", help="коды и сколько использовано")
     sub.add_parser("waitlist", help="лист ожидания")
     si = sub.add_parser("send-invites", help="письма с кодами первым из листа ожидания")
     si.add_argument("--limit", type=int, required=True)
-    si.add_argument("--plan")
-    si.add_argument("--days", type=int)
+    si.add_argument("--plan", default=BETA_PLAN)
+    si.add_argument("--days", type=int, default=BETA_DAYS)
     args = parser.parse_args(argv)
 
     conn = db.connect()

@@ -1,0 +1,8 @@
+{
+  "disableAllHooks": true,
+  "claudeMdExcludes": [
+    "/Users/*/CLAUDE.md",
+    "/home/*/CLAUDE.md",
+    "**/claude projects/white-label/**"
+  ]
+}

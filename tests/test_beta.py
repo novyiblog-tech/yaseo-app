@@ -25,7 +25,7 @@ class BetaTest(PgTestCase):
         os.environ.pop("YASEO_BETA", None)
 
     def signup(self, c, email, invite="", site=""):
-        return c.post("/signup", data={"email": email, "password": PASSWORD, "consent": "yes",
+        return c.post("/signup", data={"email": email, "password": PASSWORD, "consent": "yes", "offer": "yes",
                                        "invite": invite, "site": site})
 
     def test_code_format(self):
@@ -87,9 +87,9 @@ class BetaTest(PgTestCase):
             self.assertNotIn("x-robots-tag", {k.lower() for k in r.headers})
             self.assertEqual(c.post("/waitlist", data={"email": "w@t.ru"}).status_code, 400)
             r = c.post("/waitlist", data={"email": "W@t.ru", "site": "shop.example",
-                                          "consent": "yes"})
+                                          "consent": "yes", "offer": "yes"})
             self.assertIn("Заявка принята", r.text)
-            c.post("/waitlist", data={"email": "w@t.ru", "consent": "yes"})
+            c.post("/waitlist", data={"email": "w@t.ru", "consent": "yes", "offer": "yes"})
         rows = self.conn.execute("SELECT * FROM waitlist").fetchall()
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["site"], "shop.example", "повтор без сайта его не стирает")
@@ -112,3 +112,75 @@ class BetaTest(PgTestCase):
             self.assertIn("Disallow: /", robots)
             self.assertIn("Sitemap:", robots)
             self.assertIn("Пример на тестовом сайте", c.get("/example").text)
+
+
+class BetaPlanAndOfferTest(PgTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.app = web.create_app(cls.dsn, allow_private=True, secure_cookies=False)
+
+    def test_beta_plan_five_checks_in_30_days(self):
+        from yaseo_app import accounts
+        [code] = beta.create(self.conn)   # по умолчанию код даёт тариф «Бета»
+        u = accounts.signup(self.conn, "b@t.ru", PASSWORD, True, invite=code)
+        self.conn.execute("UPDATE users SET email_confirmed_at = now()")
+        u = self.conn.execute("SELECT * FROM users").fetchone()
+        self.assertEqual(billing.current(self.conn, u)["plan"]["code"], "beta")
+        site = accounts.add_site(self.conn, u, "http://shop.example", allow_private=True)
+        for _ in range(5):
+            jid = accounts.start_check(self.conn, u, site)
+            self.conn.execute("UPDATE jobs SET status = 'done' WHERE id = %s", (jid,))
+        with self.assertRaises(Refused) as ctx:
+            accounts.start_check(self.conn, u, site)
+        self.assertIn("5 проверок", str(ctx.exception))
+        # окно скользящее: самая старая проверка вышла за 30 дней — можно снова
+        self.conn.execute("UPDATE jobs SET created_at = now() - interval '31 days'"
+                          " WHERE id = (SELECT min(id) FROM jobs)")
+        accounts.start_check(self.conn, u, site)
+
+    def test_beta_plan_not_for_sale(self):
+        self.assertNotIn("beta", {p["code"] for p in billing.plans(self.conn)})
+
+    def test_offer_required_and_recorded(self):
+        with TestClient(self.app) as c:
+            r = c.post("/signup", data={"email": "o@t.ru", "password": PASSWORD, "consent": "yes"})
+            self.assertEqual(r.status_code, 400)
+            self.assertIn("оферты", r.text)
+            c.post("/signup", data={"email": "o@t.ru", "password": PASSWORD, "consent": "yes",
+                                    "offer": "yes"})
+        u = self.conn.execute("SELECT * FROM users").fetchone()
+        self.assertEqual(u["offer_version"], "30.09.2026")
+
+    def test_offer_page_draft_until_requisites(self):
+        with TestClient(self.app) as c:
+            r = c.get("/legal/offer")
+            self.assertIn("Черновик", r.text)
+            self.assertIn("[ИНН]", r.text)
+            env = {"YASEO_OPERATOR": "ИП Проверочный П. П.", "YASEO_OPERATOR_INN": "231000000000",
+                   "YASEO_OPERATOR_OGRNIP": "300000000000000", "YASEO_OPERATOR_ADDRESS": "Краснодар",
+                   "YASEO_SUPPORT_EMAIL": "help@yaseo.example", "YASEO_SITE_DOMAIN": "yaseo.example",
+                   "YASEO_VAT_NOTE": "НДС не облагается"}
+            os.environ.update(env)
+            try:
+                r = c.get("/legal/offer")
+            finally:
+                for k in env:
+                    os.environ.pop(k)
+            self.assertNotIn("Черновик", r.text)
+            self.assertIn("ИНН 231000000000", r.text)
+
+    def test_real_payments_blocked_without_requisites(self):
+        os.environ["YASEO_PAYMENTS"] = "yookassa"
+        try:
+            with self.assertRaises(ValueError) as ctx:
+                billing.provider(self.conn)
+        finally:
+            os.environ.pop("YASEO_PAYMENTS")
+        self.assertIn("реквизиты оферты", str(ctx.exception))
+
+    def test_landing_shows_prices(self):
+        with TestClient(self.app) as c:
+            r = c.get("/")
+        self.assertIn("4 990 ₽", r.text)
+        self.assertIn("/legal/offer", r.text)

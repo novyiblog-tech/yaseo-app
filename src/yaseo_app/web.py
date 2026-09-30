@@ -22,7 +22,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import subprocess
 import tempfile
 
-from yaseo_app import accounts, beta, billing, db, history, mailer, monitor, report, score, verify
+from yaseo_app import accounts, beta, billing, db, legal, history, mailer, monitor, report, score, verify
 from yaseo_app.accounts import Refused
 
 HERE = Path(__file__).parent
@@ -141,11 +141,12 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
 
     @app.post("/signup")
     def signup(request: Request, email: str = Form(""), password: str = Form(""),
-               consent: str = Form(""), invite: str = Form(""), site: str = Form(""),
-               c=Depends(conn)):
+               consent: str = Form(""), offer: str = Form(""), invite: str = Form(""),
+               site: str = Form(""), c=Depends(conn)):
         try:
             user = accounts.signup(c, email, password, consent == "yes",
-                                   ip=client_ip(request), invite=invite or None)
+                                   ip=client_ip(request), invite=invite or None,
+                                   offer=offer == "yes")
         except Refused as exc:
             return page(request, "cabinet/signup.html.j2", error=str(exc), email=email,
                         invite=invite, site=site, beta_on=beta.enabled(), status=400)
@@ -165,7 +166,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
 
     def landing_page(request, c, status=200, **ctx):
         return page(request, "landing/index.html.j2", status=status, beta_on=beta.enabled(),
-                    plans=billing.plans(c), show_prices=os.environ.get("YASEO_SHOW_PRICES") == "1",
+                    plans=billing.plans(c), vat_note=legal.requisites()["vat_note"],
                     request_base=str(request.base_url).rstrip("/"), **ctx)
 
     @app.post("/waitlist")
@@ -185,12 +186,15 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         data = json.loads((HERE / "examples" / "test-site.json").read_text(encoding="utf-8"))
         return HTMLResponse(report.render(data, kind="Пример на тестовом сайте"))
 
-    @app.get("/legal/{doc}")
-    def legal(request: Request, doc: str):
-        titles = {"offer": "Публичная оферта", "privacy": "Политика обработки персональных данных"}
-        if doc not in titles:
-            raise HTTPException(status_code=404)
-        return page(request, "landing/legal.html.j2", title=titles[doc])
+    @app.get("/legal/offer")
+    def offer(request: Request):
+        return page(request, "landing/offer.html.j2", req=legal.requisites(),
+                    version=legal.OFFER_VERSION)
+
+    @app.get("/legal/privacy")
+    def privacy(request: Request):
+        return page(request, "landing/legal.html.j2",
+                    title="Политика обработки персональных данных")
 
     @app.get("/robots.txt")
     def robots(request: Request):

@@ -57,7 +57,7 @@ def normalize_email(email: str) -> str:
 
 
 def signup(conn: psycopg.Connection, email: str, password: str, consent: bool,
-           ip: str | None = None, invite: str | None = None) -> dict:
+           ip: str | None = None, invite: str | None = None, offer: bool = True) -> dict:
     email = normalize_email(email)
     if not EMAIL_RE.match(email) or len(email) > 254:
         raise Refused("Проверьте адрес почты.")
@@ -65,7 +65,9 @@ def signup(conn: psycopg.Connection, email: str, password: str, consent: bool,
         raise Refused(f"Пароль — не короче {PASSWORD_MIN} знаков.")
     if not consent:
         raise Refused("Без согласия на обработку персональных данных зарегистрировать нельзя.")
-    from yaseo_app import beta, verify
+    if not offer:
+        raise Refused("Чтобы зарегистрироваться, примите условия оферты.")
+    from yaseo_app import beta, legal, verify
     verify.check_signup_ip(conn, ip)
     if beta.enabled():
         if not invite:
@@ -73,9 +75,10 @@ def signup(conn: psycopg.Connection, email: str, password: str, consent: bool,
         beta.check(conn, invite)
     with conn.transaction():
         row = conn.execute(
-            "INSERT INTO users (email, password_hash, consent_at, signup_ip)"
-            " VALUES (%s, %s, now(), %s) ON CONFLICT (email) DO NOTHING RETURNING *",
-            (email, hash_password(password), ip),
+            "INSERT INTO users (email, password_hash, consent_at, signup_ip, offer_version,"
+            " offer_accepted_at) VALUES (%s, %s, now(), %s, %s, now())"
+            " ON CONFLICT (email) DO NOTHING RETURNING *",
+            (email, hash_password(password), ip, legal.OFFER_VERSION),
         ).fetchone()
         if row is None:
             raise Refused("Этот адрес уже зарегистрирован — войдите.")

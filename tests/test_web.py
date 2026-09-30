@@ -44,7 +44,7 @@ class WebTest(PgTestCase):
 
     def signup(self, client=None, email="a@test.ru"):
         c = client or self.client
-        r = c.post("/signup", data={"email": email, "password": PASSWORD, "consent": "yes"})
+        r = c.post("/signup", data={"email": email, "password": PASSWORD, "consent": "yes", "offer": "yes"})
         self.assertEqual(r.status_code, 200, r.text[:300])
         self.conn.execute("UPDATE users SET email_confirmed_at = now() WHERE email = %s", (email,))
         return c
@@ -59,7 +59,7 @@ class WebTest(PgTestCase):
         self.assertEqual(r.status_code, 400)
         self.assertIn("согласия", r.text)
         r = self.client.post("/signup", data={"email": "a@test.ru", "password": "short",
-                                              "consent": "yes"})
+                                              "consent": "yes", "offer": "yes"})
         self.assertEqual(r.status_code, 400)
 
     def test_password_is_not_stored_plain(self):
