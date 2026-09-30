@@ -10,15 +10,10 @@
     <input type="hidden" name="csrf" value="{{ user.csrf }}">
     <h2>Новая проверка</h2>
     <div class="field"><label for="queries">Что клиенты пишут в Яндексе, когда ищут ваши услуги
-      <span class="hint">Каждая фраза — с новой строки, до {{ plan.queries_per_audit or 30 }}.</span></label>
+      <span class="hint">Каждая фраза — с новой строки. На вашем тарифе — до {{ plan.queries_per_audit or 30 }}.</span></label>
       <textarea id="queries" name="queries" placeholder="ремонт квартир в краснодаре&#10;дизайн интерьера">{{ queries or '' }}</textarea></div>
     <p class="muted small" style="margin-top:8px">Можно оставить пустым — тогда проверим только сайт: ошибки и готовность к нейросетям. С фразами покажем ещё, сколько людей их ищет, на каком месте вы в Яндексе и упоминает ли вас нейросеть Яндекса.</p>
-    <div class="row" style="margin-top:16px">
-      <div class="field" style="margin-top:0;width:230px"><label for="max_pages">Сколько страниц проверить
-        <span class="hint">От 1 до 50. Чем больше, тем дольше.</span></label>
-        <input id="max_pages" type="number" name="max_pages" value="20" min="1" max="50"></div>
-      <button class="btn" type="submit">Запустить проверку</button>
-    </div>
+    <p style="margin-top:18px"><button class="btn" type="submit">Запустить проверку</button></p>
     {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
   </form>
   <section class="card table-scroll" id="positions">

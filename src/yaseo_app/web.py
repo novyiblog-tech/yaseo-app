@@ -429,7 +429,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
 
     @app.post("/sites/{site_id}/run")
     def run(request: Request, site_id: int, queries: str = Form(""),
-            max_pages: int = Form(20), csrf: str = Form(""),
+            max_pages: int = Form(accounts.MAX_PAGES), csrf: str = Form(""),
             user=Depends(current), c=Depends(conn)):
         check_csrf(user, csrf)
         site = own_site(c, user, site_id)

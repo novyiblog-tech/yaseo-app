@@ -255,7 +255,7 @@ def parse_queries(text: str) -> list[str]:
 
 
 def start_check(conn: psycopg.Connection, user: dict, site: dict, queries_text: str = "",
-                max_pages: int = 20) -> int:
+                max_pages: int = MAX_PAGES) -> int:
     active = conn.execute(
         "SELECT count(*) FILTER (WHERE site_id = %s) AS here, count(*) AS total FROM jobs"
         " WHERE user_id = %s AND kind = 'audit' AND status IN ('queued', 'running')",
