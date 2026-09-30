@@ -201,6 +201,36 @@ class ShareBrandTest(Base):
             self.conn.execute("DELETE FROM subscriptions")
             self.assertEqual(anon.get(link).status_code, 404, "тариф упал — ссылка не работает")
 
+    def test_site_page_shows_summary_and_settings_page_saves(self):
+        u = self.owner()
+        s = self.site(u)
+        with TestClient(self.app) as c:
+            self.login(c, "o@t.ru")
+            page = c.get(f"/sites/{s['id']}").text
+            self.assertIn(f'href="/sites/{s["id"]}/settings"', page)
+            self.assertNotIn('name="rivals"', page, "форма — на своей странице, тут сводка")
+            form = c.get(f"/sites/{s['id']}/settings").text
+            self.assertIn('name="rivals"', form)
+            bad = c.post(f"/sites/{s['id']}/settings", data={
+                "csrf": csrf(form), "region": "35", "schedule": "week", "rivals": "a.ru, b, c"})
+            self.assertEqual(bad.status_code, 400)
+            self.assertIn('name="rivals"', bad.text, "ошибка — на той же странице настроек")
+            c.post(f"/sites/{s['id']}/settings", data={
+                "csrf": csrf(form), "region": "35", "schedule": "week", "rivals": "a.ru"})
+            page = c.get(f"/sites/{s['id']}").text
+        self.assertIn("Краснодар", page)
+        self.assertIn("раз в неделю", page)
+
+    def test_free_site_summary_points_to_plans(self):
+        u = self.owner(plan="free")
+        s = self.site(u)
+        with TestClient(self.app) as c:
+            self.login(c, "o@t.ru")
+            page = c.get(f"/sites/{s['id']}").text
+        self.assertIn("с «Старт»", page)
+        self.assertIn("с «Про»", page)
+        self.assertNotIn(f"/sites/{s['id']}/settings", page, "менять нечего — ведём на тарифы")
+
     def test_free_cannot_share(self):
         u = self.owner(plan="once")
         jid = self.done_job(u)

@@ -58,11 +58,28 @@ tr:last-child td { border-bottom: 0; }
 tr.row-link { position: relative; cursor: pointer; }
 tr.row-link a::after { content: ""; position: absolute; inset: 0; }
 tr.row-link td { transition: background-color .12s; }
-tr.row-link:hover td, tr.row-link:focus-within td { background: var(--surface-2); }
+tr.row-link:hover td, tr.row-link:focus-within td { background: rgba(200,255,0,0.07); }
 tr.row-link:hover a, tr.row-link:focus-within a { color: var(--accent); }
 .row-go { color: var(--ink-3); font-weight: 700; white-space: nowrap; }
 tr.row-link:hover .row-go, tr.row-link:focus-within .row-go { color: var(--accent); }
 .table-scroll { overflow-x: auto; }
+/* история на телефоне: таблица не влезает — каждая проверка становится карточкой в две строки
+   (№ · статус · оценка / дата · открыть); колонку «Фраз» прячем */
+@media (max-width: 640px) {
+  .history { display: block; }
+  .history thead { display: none; }
+  .history .pill { box-shadow: inset 0 0 0 1px var(--line); }
+  .history tbody { display: grid; gap: 8px; }
+  .history tr.row-link { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "num status score" "num date go"; gap: 6px 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); transition: background-color .12s, border-color .12s; }
+  .history td { padding: 0; border: 0; background: none !important; }
+  .history td:nth-child(1) { grid-area: num; align-self: start; }
+  .history td:nth-child(2) { grid-area: status; display: flex; flex-wrap: wrap; gap: 6px; }
+  .history td:nth-child(3) { grid-area: score; font-size: 17px; }
+  .history td:nth-child(4) { display: none; }
+  .history td:nth-child(5) { grid-area: date; text-align: left; }
+  .history td:nth-child(6) { grid-area: go; }
+  .history tr.row-link:hover, .history tr.row-link:focus-within { background: rgba(200,255,0,0.07); border-color: rgba(200,255,0,0.45); }
+}
 .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: var(--size-micro); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
 .pill.done, .pill.ok { background: var(--accent); color: var(--accent-ink); }
 .pill.running, .pill.queued, .pill.partial { background: #3a3000; color: #ffd97a; }
@@ -233,6 +250,24 @@ tr.row-link:hover .row-go, tr.row-link:focus-within .row-go { color: var(--accen
   .l-plans { --w: min(1240px, 100vw - 64px); margin-left: calc((100% - var(--w)) / 2); margin-right: calc((100% - var(--w)) / 2); }
 }
 @media (prefers-reduced-motion: reduce) { .l-sample, .l-plan { transition: none; } .l-plan:hover { transform: none; } }
+/* волна при прокрутке: плашки по очереди приподнимаются и подсвечиваются, как тариф под мышью, и опускаются.
+   Только CSS — скрипты закрыты CSP; браузер без scroll-driven анимаций покажет плашки как есть.
+   Тарифы на телефоне листаются вбок, их ближайший скроллер — сама лента, поэтому они идут
+   от общей шкалы ленты (--plans), а не от собственной */
+@keyframes l-rise { 50% { transform: translateY(-3px); border-color: transparent; box-shadow: var(--glow); } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .l-grid3 > .card, .l-steps li { animation: l-rise linear; animation-timeline: view(); animation-range: cover 14% cover 42%; }
+    .l-grid3 > .card:nth-child(2) { animation-range: cover 21% cover 49%; }
+    .l-grid3 > .card:nth-child(3) { animation-range: cover 28% cover 56%; }
+    .l-plans { view-timeline: --plans; }
+    .l-plan { animation: l-rise linear; animation-timeline: --plans; animation-range: cover 14% cover 36%; }
+    .l-plan:nth-child(2) { animation-range: cover 19% cover 41%; }
+    .l-plan:nth-child(3) { animation-range: cover 24% cover 46%; }
+    .l-plan:nth-child(4) { animation-range: cover 29% cover 51%; }
+    .l-plan:nth-child(5) { animation-range: cover 34% cover 56%; }
+  }
+}
 
 /* правовые документы */
 .doc { max-width: 72ch; }
@@ -242,6 +277,13 @@ tr.row-link:hover .row-go, tr.row-link:focus-within .row-go { color: var(--accen
 .doc p.muted { color: var(--ink-2); }
 
 .site-prefs select, .share input { width: 100%; }
+/* сводка настроек на странице сайта: подпись сверху, значение крупнее */
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.card-head h2 { margin: 0; }
+.prefs-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 24px; margin: 0; }
+.prefs-sum dt { font-size: var(--size-small); color: var(--ink-3); }
+.prefs-sum dd { margin: 2px 0 0; font-weight: 700; }
+@media (max-width: 640px) { .prefs-sum { grid-template-columns: 1fr 1fr; } }
 .share { margin-top: 14px; }
 .share .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
 .share .row input { flex: 1 1 260px; }

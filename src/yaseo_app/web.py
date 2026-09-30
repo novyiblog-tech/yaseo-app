@@ -392,6 +392,16 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
                     yandex_ready=yandex.configured(),
                     **feature_ctx(c, user), **extra)
 
+    def site_settings_view(request, c, user, site, status=200, **extra):
+        return page(request, "cabinet/site_settings.html.j2", user, site=site, status=status,
+                    regions=prefs.REGIONS, schedules=prefs.SCHEDULES,
+                    **feature_ctx(c, user), **extra)
+
+    @app.get("/sites/{site_id}/settings")
+    def site_settings_page(request: Request, site_id: int, user=Depends(current),
+                           c=Depends(conn)):
+        return site_settings_view(request, c, user, own_site(c, user, site_id))
+
     @app.post("/sites/{site_id}/settings")
     async def site_settings(request: Request, site_id: int, user=Depends(current),
                             c=Depends(conn)):
@@ -401,9 +411,9 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         try:
             prefs.save_site(c, user, site, form)
         except Refused as exc:
-            return site_view(request, c, user, site, status=400, prefs_error=str(exc),
-                             exclude_text=form.get("exclude", ""),
-                             rivals_text=form.get("rivals", ""))
+            return site_settings_view(request, c, user, site, status=400,
+                                      prefs_error=str(exc), exclude_text=form.get("exclude", ""),
+                                      rivals_text=form.get("rivals", ""))
         return RedirectResponse(f"/sites/{site_id}#settings", status_code=303)
 
     @app.get("/sites/{site_id}/yandex")

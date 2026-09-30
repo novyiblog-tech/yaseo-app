@@ -53,37 +53,22 @@
   </section>
 
   {% macro locked(code) %}<span class="muted small">с тарифа «{{ feature_plan[code] }}» · <a href="/billing">тарифы</a></span>{% endmacro %}
-  <form class="card site-prefs" method="post" action="/sites/{{ site.id }}/settings" id="settings">
-    <input type="hidden" name="csrf" value="{{ user.csrf }}">
-    <h2>Настройки сайта</h2>
-    {% if prefs_error %}<div class="error" role="alert">{{ prefs_error }}</div>{% endif %}
-    <div class="field"><label for="region">Город для места в Яндексе и спроса
-      <span class="hint">Выдача в Краснодаре и в Москве разная. Сменить город — история мест начнётся заново.</span></label>
-      {% if feats.region %}<select id="region" name="region">{% for code, name in regions %}<option value="{{ code }}" {% if code == site.region %}selected{% endif %}>{{ name }}</option>{% endfor %}</select>
-      {% else %}<div>Вся Россия · {{ locked('region') }}</div>{% endif %}</div>
-    <div class="field"><label for="schedule">Проверять сайт автоматически
-      <span class="hint">С фразами последней проверки, результат — письмом. Тратит проверки тарифа.</span></label>
-      {% if feats.schedule %}<select id="schedule" name="schedule">{% for code, name in schedules.items() %}<option value="{{ code }}" {% if code == site.schedule %}selected{% endif %}>{{ name }}</option>{% endfor %}</select>
-      {% else %}<div>{{ locked('schedule') }}</div>{% endif %}</div>
-    <div class="field"><label for="exclude">Не проверять разделы сайта
-      <span class="hint">Путь с новой строки: /cart, /personal, /catalog/*/filter, *?sort=*. Корзина, фильтры и личный кабинет дают ложные замечания.</span></label>
-      {% if feats.exclude %}<textarea id="exclude" name="exclude" style="min-height:80px" placeholder="/cart&#10;/personal&#10;*?sort=*">{{ exclude_text if exclude_text is defined else (site.exclude or [])|join('\n') }}</textarea>
-      {% else %}<div>{{ locked('exclude') }}</div>{% endif %}</div>
-    {% if feats.gentle %}<label class="check"><input type="checkbox" name="gentle" value="yes" {% if site.gentle %}checked{% endif %}>
-      <span>Бережный обход: страницы по одной раз в 2 секунды — если хостинг слабый и сайт падает от нагрузки. Проверка дольше.</span></label>
-    {% else %}<p class="check"><span>Бережный обход · {{ locked('gentle') }}</span></p>{% endif %}
-    <div class="field"><label>Какие разделы собирать
-      <span class="hint">Выключите ненужное — проверка быстрее, а ответы нейросети не тратятся.</span></label>
-      {% if feats.sections %}{% for key in ('demand', 'positions', 'answers') %}
-      <label class="check" style="margin-top:6px"><input type="checkbox" name="sec_{{ key }}" value="yes" {% if (site.sections or {}).get(key, true) %}checked{% endif %}><span>{{ SECTION_TITLES[key] }}</span></label>{% endfor %}
-      {% else %}<div>Все разделы · {{ locked('sections') }}</div>{% endif %}</div>
-    <div class="field"><label for="rivals">Конкуренты — до 5 сайтов
-      <span class="hint">Покажем их место в Яндексе и называет ли их нейросеть — по тем же фразам, без лишних трат.</span></label>
-      {% if feats.rivals %}<textarea id="rivals" name="rivals" style="min-height:80px" placeholder="rival.ru&#10;competitor.ru">{{ rivals_text if rivals_text is defined else (site.rivals or [])|join('\n') }}</textarea>
-      {% else %}<div>{{ locked('rivals') }}</div>{% endif %}</div>
-    {% if feats.region or feats.schedule or feats.exclude or feats.gentle or feats.sections or feats.rivals %}
-    <p style="margin-top:18px"><button class="btn ghost" type="submit">Сохранить настройки</button></p>{% endif %}
-  </form>
+  {# сводка: что действует сейчас; менять — на отдельной странице #}
+  {% macro tag(code) %}{% if not feats[code] %} <span class="muted small">· с «{{ feature_plan[code] }}»</span>{% endif %}{% endmacro %}
+  {% set any_feat = feats.region or feats.schedule or feats.exclude or feats.gentle or feats.sections or feats.rivals %}
+  <section class="card" id="settings">
+    <div class="card-head"><h2>Настройки сайта</h2>
+      {% if any_feat %}<a class="btn ghost" href="/sites/{{ site.id }}/settings">Изменить</a>
+      {% else %}<a class="btn ghost" href="/billing">Тарифы</a>{% endif %}</div>
+    <dl class="prefs-sum">
+      <div><dt>Город</dt><dd>{{ region_name(eff.region) }}{{ tag('region') }}</dd></div>
+      <div><dt>Автопроверка</dt><dd>{{ 'выключена' if eff.schedule == 'off' else schedules[eff.schedule] }}{{ tag('schedule') }}</dd></div>
+      <div><dt>Исключённые разделы</dt><dd>{{ eff.exclude|length if eff.exclude else 'нет' }}{{ tag('exclude') }}</dd></div>
+      <div><dt>Обход</dt><dd>{{ 'бережный' if eff.gentle else 'обычный' }}{{ tag('gentle') }}</dd></div>
+      <div><dt>Собираем</dt><dd>{{ 'всё' if not eff.off else (3 - eff.off|length)|string + ' из 3 разделов' }}{{ tag('sections') }}</dd></div>
+      <div><dt>Конкуренты</dt><dd>{{ eff.rivals|length if eff.rivals else 'нет' }}{{ tag('rivals') }}</dd></div>
+    </dl>
+  </section>
 
   <section class="card">
     <h2>Яндекс Вебмастер и Метрика</h2>
@@ -97,7 +82,7 @@
   <div class="card table-scroll">
     <h2>История</h2>
     {% if jobs %}
-    <table>
+    <table class="history">
       <thead><tr><th>№</th><th>Статус</th><th class="num">Оценка</th><th class="num">Фраз</th><th class="num">Запущена</th><th></th></tr></thead>
       <tbody>
       {% for j in jobs %}
