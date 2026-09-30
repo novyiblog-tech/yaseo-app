@@ -32,13 +32,15 @@ class PgTestCase(unittest.TestCase):
     def setUp(self):
         self.conn.execute("TRUNCATE spend, cache, jobs, sites, users RESTART IDENTITY CASCADE")
         self.conn.execute("DROP TABLE IF EXISTS fake_provider")
+        self.conn.execute("TRUNCATE outbox, email_tokens")
         self.conn.execute("DELETE FROM plans")
         self.conn.execute("DELETE FROM sources")
         db.migrate(self.conn)  # вернуть источники к заводским настройкам
 
     def user(self, email="u@test", plan="free") -> dict:
         return self.conn.execute(
-            "INSERT INTO users (email, plan) VALUES (%s, %s) RETURNING *", (email, plan)
+            "INSERT INTO users (email, plan, email_confirmed_at) VALUES (%s, %s, now())"
+            " RETURNING *", (email, plan)
         ).fetchone()
 
     def set_source(self, name, **fields):

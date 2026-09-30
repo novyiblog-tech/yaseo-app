@@ -121,3 +121,5 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 720px) { .diff-nums { grid-template-columns: repeat(2, 1fr); } }
 .plan .pill { justify-self: start; }
 .spark-cell { color: var(--ink-3); width: 130px; }
+.confirm-bar { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.confirm-bar .linkbtn { color: #ffd97a; text-decoration: underline; }

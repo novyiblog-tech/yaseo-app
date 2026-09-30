@@ -46,6 +46,7 @@ class WebTest(PgTestCase):
         c = client or self.client
         r = c.post("/signup", data={"email": email, "password": PASSWORD, "consent": "yes"})
         self.assertEqual(r.status_code, 200, r.text[:300])
+        self.conn.execute("UPDATE users SET email_confirmed_at = now() WHERE email = %s", (email,))
         return c
 
     def test_anonymous_goes_to_login(self):

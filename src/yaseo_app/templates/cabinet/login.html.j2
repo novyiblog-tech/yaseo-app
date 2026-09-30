@@ -10,7 +10,8 @@
       <input id="email" type="email" name="email" value="{{ email or '' }}" autocomplete="email" required></div>
     <div class="field"><label for="password">Пароль</label>
       <input id="password" type="password" name="password" autocomplete="current-password" required></div>
-    <p style="margin-top:22px"><button class="btn" type="submit">Войти</button></p>
+    <p style="margin-top:22px;display:flex;gap:18px;align-items:center"><button class="btn" type="submit">Войти</button>
+      <a class="small muted" href="/forgot">Забыли пароль?</a></p>
   </form>
 </div>
 {% endblock %}

@@ -111,21 +111,44 @@ def build(row: dict) -> EmailMessage:
     return msg
 
 
-def send_pending(conn: psycopg.Connection, snd: Sender | None = None, limit: int = 50) -> dict:
-    snd = snd or sender()
-    out = {"sent": 0, "failed": 0}
-    rows = conn.execute("SELECT * FROM outbox WHERE status = 'queued' AND attempts < %s"
-                        " ORDER BY id LIMIT %s", (MAX_ATTEMPTS, limit)).fetchall()
-    for row in rows:
+def _deliver(conn: psycopg.Connection, mail_id: int, snd: Sender) -> bool | None:
+    """Отправить одно письмо под блокировкой строки: планировщик и веб не отправят его
+    дважды. None — письмо уже взял другой процесс или оно не в очереди."""
+    with conn.transaction():
+        row = conn.execute("SELECT * FROM outbox WHERE id = %s AND status = 'queued'"
+                           " AND attempts < %s FOR UPDATE SKIP LOCKED",
+                           (mail_id, MAX_ATTEMPTS)).fetchone()
+        if row is None:
+            return None
         try:
             snd.send(build(row))
         except Exception as exc:  # письмо ждёт следующего прохода
             conn.execute("UPDATE outbox SET attempts = attempts + 1, error = %s,"
                          " status = CASE WHEN attempts + 1 >= %s THEN 'failed' ELSE 'queued' END"
-                         " WHERE id = %s", (str(exc)[:500], MAX_ATTEMPTS, row["id"]))
-            out["failed"] += 1
-            continue
+                         " WHERE id = %s", (str(exc)[:500], MAX_ATTEMPTS, mail_id))
+            return False
         conn.execute("UPDATE outbox SET status = 'sent', sent_at = now(), attempts = attempts + 1"
-                     " WHERE id = %s", (row["id"],))
-        out["sent"] += 1
+                     " WHERE id = %s", (mail_id,))
+        return True
+
+
+def send_one(conn: psycopg.Connection, mail_id: int | None, snd: Sender | None = None) -> bool:
+    """Отправить сразу — для писем, которых человек ждёт у экрана. Не ушло — останется
+    в очереди, и его заберёт планировщик."""
+    if mail_id is None:
+        return False
+    return bool(_deliver(conn, mail_id, snd or sender()))
+
+
+def send_pending(conn: psycopg.Connection, snd: Sender | None = None, limit: int = 50) -> dict:
+    snd = snd or sender()
+    out = {"sent": 0, "failed": 0}
+    ids = conn.execute("SELECT id FROM outbox WHERE status = 'queued' AND attempts < %s"
+                       " ORDER BY id LIMIT %s", (MAX_ATTEMPTS, limit)).fetchall()
+    for r in ids:
+        done = _deliver(conn, r["id"], snd)
+        if done is True:
+            out["sent"] += 1
+        elif done is False:
+            out["failed"] += 1
     return out

@@ -30,6 +30,13 @@
   </nav>
 </header>
 <main class="wrap">
+{% if user and not user.email_confirmed_at %}
+<form class="note fake confirm-bar" method="post" action="/confirm/resend">
+  <input type="hidden" name="csrf" value="{{ user.csrf }}">
+  <span>Подтвердите почту {{ user.email }} — ссылка в письме. До этого проверки не запускаются.</span>
+  <button class="linkbtn" type="submit">Отправить ещё раз</button>
+</form>
+{% endif %}
 {% block main %}{% endblock %}
 </main>
 </body>

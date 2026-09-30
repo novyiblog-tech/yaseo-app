@@ -56,7 +56,8 @@ def normalize_email(email: str) -> str:
     return (email or "").strip().lower()
 
 
-def signup(conn: psycopg.Connection, email: str, password: str, consent: bool) -> dict:
+def signup(conn: psycopg.Connection, email: str, password: str, consent: bool,
+           ip: str | None = None) -> dict:
     email = normalize_email(email)
     if not EMAIL_RE.match(email) or len(email) > 254:
         raise Refused("Проверьте адрес почты.")
@@ -64,13 +65,16 @@ def signup(conn: psycopg.Connection, email: str, password: str, consent: bool) -
         raise Refused(f"Пароль — не короче {PASSWORD_MIN} знаков.")
     if not consent:
         raise Refused("Без согласия на обработку персональных данных зарегистрировать нельзя.")
+    from yaseo_app import verify
+    verify.check_signup_ip(conn, ip)
     row = conn.execute(
-        "INSERT INTO users (email, password_hash, consent_at) VALUES (%s, %s, now())"
-        " ON CONFLICT (email) DO NOTHING RETURNING *",
-        (email, hash_password(password)),
+        "INSERT INTO users (email, password_hash, consent_at, signup_ip)"
+        " VALUES (%s, %s, now(), %s) ON CONFLICT (email) DO NOTHING RETURNING *",
+        (email, hash_password(password), ip),
     ).fetchone()
     if row is None:
         raise Refused("Этот адрес уже зарегистрирован — войдите.")
+    verify.send_confirmation(conn, row)
     return row
 
 
@@ -251,8 +255,9 @@ def start_check(conn: psycopg.Connection, user: dict, site: dict, queries_text: 
         raise Refused("Проверка этого сайта уже идёт.")
     if active["total"] >= MAX_ACTIVE_JOBS:
         raise Refused(f"Одновременно идёт не больше {MAX_ACTIVE_JOBS} проверок.")
-    from yaseo_app import billing
-    allow = billing.audit_allowance(conn, user)
+    from yaseo_app import billing, verify
+    verify.require_confirmed(user)
+    allow = billing.audit_allowance(conn, user, site["url"])
     queries = parse_queries(queries_text)
     if allow["queries"] is not None:
         queries = queries[:allow["queries"]]

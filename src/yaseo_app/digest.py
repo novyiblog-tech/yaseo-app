@@ -82,7 +82,7 @@ def queue_weekly(conn: psycopg.Connection, today: date) -> int:
     """Поставить письма недели всем, кто их не отключил. Повтор в ту же неделю — ничего."""
     year, week, _ = today.isocalendar()
     n = 0
-    for user in conn.execute("SELECT * FROM users WHERE weekly_digest").fetchall():
+    for user in conn.execute("SELECT * FROM users WHERE weekly_digest AND email_confirmed_at IS NOT NULL").fetchall():
         data = build(conn, user, today)
         if data is None:
             continue

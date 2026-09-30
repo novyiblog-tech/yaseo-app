@@ -12,6 +12,11 @@ from yaseo_app.accounts import Refused
 PASSWORD = "длинный-пароль-1"
 
 
+def signup(test, c, email):
+    c.post("/signup", data={"email": email, "password": PASSWORD, "consent": "yes"})
+    test.conn.execute("UPDATE users SET email_confirmed_at = now() WHERE email = %s", (email,))
+
+
 def csrf(html: str) -> str:
     return re.search(r'name="csrf" value="([^"]+)"', html).group(1)
 
@@ -137,7 +142,7 @@ class BillingWebTest(PgTestCase):
 
     def test_buy_through_pages(self):
         with TestClient(self.app) as c:
-            r = c.post("/signup", data={"email": "a@t.ru", "password": PASSWORD, "consent": "yes"})
+            signup(self, c, "a@t.ru")
             page = c.get("/billing").text
             self.assertIn("Проверка", page)
             r = c.post("/billing/buy", data={"plan": "pro", "csrf": csrf(page)})
@@ -150,7 +155,7 @@ class BillingWebTest(PgTestCase):
 
     def test_webhook_trusts_provider_not_body(self):
         with TestClient(self.app) as c:
-            c.post("/signup", data={"email": "b@t.ru", "password": PASSWORD, "consent": "yes"})
+            signup(self, c, "b@t.ru")
             page = c.get("/billing").text
             r = c.post("/billing/buy", data={"plan": "pro", "csrf": csrf(page)},
                        follow_redirects=False)
@@ -163,8 +168,8 @@ class BillingWebTest(PgTestCase):
 
     def test_other_user_cannot_see_payment(self):
         with TestClient(self.app) as a, TestClient(self.app) as b:
-            a.post("/signup", data={"email": "c@t.ru", "password": PASSWORD, "consent": "yes"})
-            b.post("/signup", data={"email": "d@t.ru", "password": PASSWORD, "consent": "yes"})
+            signup(self, a, "c@t.ru")
+            signup(self, b, "d@t.ru")
             page = a.get("/billing").text
             r = a.post("/billing/buy", data={"plan": "pro", "csrf": csrf(page)},
                        follow_redirects=False)

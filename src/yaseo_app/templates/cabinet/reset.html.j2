@@ -1,0 +1,14 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}Новый пароль{% endblock %}
+{% block main %}
+<div class="auth card">
+  <h1>Новый пароль</h1>
+  {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/reset">
+    <input type="hidden" name="t" value="{{ token }}">
+    <div class="field"><label for="password">Пароль, не короче 10 знаков</label>
+      <input id="password" type="password" name="password" autocomplete="new-password" minlength="10" required></div>
+    <p style="margin-top:22px"><button class="btn" type="submit">Сохранить и войти</button></p>
+  </form>
+</div>
+{% endblock %}

@@ -96,10 +96,22 @@ def check_site_slot(conn: psycopg.Connection, user: dict) -> None:
                       f"{cur['plan']['sites']}. Перейдите на тариф выше.")
 
 
-def audit_allowance(conn: psycopg.Connection, user: dict) -> dict:
+def audit_allowance(conn: psycopg.Connection, user: dict, site_url: str | None = None) -> dict:
     """Лимиты, с которыми ставится проверка. Нет попыток — отказ с понятной причиной."""
     cur = current(conn, user)
     p, used = cur["plan"], usage(conn, user, cur)
+    if p["period"] == "free" and site_url:
+        # Бесплатная проверка — одна на домен на все кабинеты: десять регистраций
+        # не дают десять бесплатных проверок одного сайта.
+        from yaseo_app.sources import host
+        taken = conn.execute(
+            "SELECT 1 FROM jobs WHERE plan = 'free' AND kind = 'audit' AND status <> 'failed'"
+            " AND created_at > now() - make_interval(days => %s) AND user_id <> %s"
+            " AND lower(regexp_replace(params->>'url', '^https?://(www\\.)?([^/:]+).*$', '\\2')) = %s"
+            " LIMIT 1", (p["free_every_days"] or 30, user["id"], host(site_url))).fetchone()
+        if taken:
+            raise Refused("Бесплатная проверка этого сайта уже была в последние "
+                          f"{p['free_every_days']} дней. Полная проверка — на платном тарифе.")
     if _left(p["audits_per_period"], used["audits"]) == 0:
         if p["period"] == "free":
             raise Refused(f"Бесплатная проверка — раз в {p['free_every_days']} дней. "
@@ -185,6 +197,8 @@ def provider(conn: psycopg.Connection) -> Provider:
 
 def start_purchase(conn: psycopg.Connection, user: dict, plan_code: str, prov: Provider,
                    return_url: str) -> str:
+    from yaseo_app import verify
+    verify.require_confirmed(user)
     p = plan(conn, plan_code)
     if p["period"] == "free" or not p["public"]:
         raise Refused("Этот тариф не покупается.")

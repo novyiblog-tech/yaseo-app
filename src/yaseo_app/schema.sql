@@ -245,3 +245,17 @@ CREATE TABLE IF NOT EXISTS outbox (
     sent_at    timestamptz
 );
 ALTER TABLE users ADD COLUMN IF NOT EXISTS weekly_digest boolean NOT NULL DEFAULT true;
+
+-- Подтверждение почты и восстановление пароля. В письме — случайный токен, в базе — его хэш.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_confirmed_at timestamptz;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_ip inet;
+CREATE TABLE IF NOT EXISTS email_tokens (
+    token_hash text PRIMARY KEY,
+    user_id    bigint NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    purpose    text NOT NULL CHECK (purpose IN ('confirm', 'reset')),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    expires_at timestamptz NOT NULL,
+    used_at    timestamptz
+);
+CREATE INDEX IF NOT EXISTS email_tokens_user ON email_tokens (user_id, purpose, created_at);
+CREATE INDEX IF NOT EXISTS users_signup_ip ON users (signup_ip, created_at);

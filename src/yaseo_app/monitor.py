@@ -40,6 +40,8 @@ def quota(conn: psycopg.Connection, user: dict) -> dict:
 
 def add_queries(conn: psycopg.Connection, user: dict, site: dict, text: str,
                 region: int = RUSSIA) -> int:
+    from yaseo_app import verify
+    verify.require_confirmed(user)
     q = quota(conn, user)
     if q["limit"] == 0:
         raise Refused("Наблюдение за позициями — в тарифах «Старт» и выше.")

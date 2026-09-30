@@ -1,0 +1,12 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}Подтверждение почты{% endblock %}
+{% block main %}
+<div class="auth card">
+  {% if ok %}<h1>Почта подтверждена</h1>
+  <p class="muted" style="margin-top:10px">Можно запускать проверку.</p>
+  <p style="margin-top:18px"><a class="btn" href="/sites">К сайтам</a></p>
+  {% else %}<h1>Ссылка не сработала</h1>
+  <p class="muted" style="margin-top:10px">Она уже использована или прошло три дня. Войдите в кабинет и отправьте письмо ещё раз.</p>
+  <p style="margin-top:18px"><a class="btn ghost" href="/sites">В кабинет</a></p>{% endif %}
+</div>
+{% endblock %}

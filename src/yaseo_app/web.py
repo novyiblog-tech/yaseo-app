@@ -22,7 +22,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import subprocess
 import tempfile
 
-from yaseo_app import accounts, billing, db, history, mailer, monitor, report, score
+from yaseo_app import accounts, billing, db, history, mailer, monitor, report, score, verify
 from yaseo_app.accounts import Refused
 
 HERE = Path(__file__).parent
@@ -38,6 +38,16 @@ SECTION_STATUS = {"ok": "собран", "partial": "собран частичн�
 CSP = ("default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
        "font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; "
        "frame-ancestors 'none'; base-uri 'none'")
+
+
+def client_ip(request: Request) -> str | None:
+    """Адрес посетителя. За обратным прокси uvicorn запускается с --proxy-headers."""
+    import ipaddress
+    host = request.client.host if request.client else None
+    try:
+        return str(ipaddress.ip_address(host)) if host else None
+    except ValueError:
+        return None
 
 
 def _money(v) -> str:
@@ -127,10 +137,54 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
     def signup(request: Request, email: str = Form(""), password: str = Form(""),
                consent: str = Form(""), c=Depends(conn)):
         try:
-            user = accounts.signup(c, email, password, consent == "yes")
+            user = accounts.signup(c, email, password, consent == "yes",
+                                   ip=client_ip(request))
         except Refused as exc:
             return page(request, "cabinet/signup.html.j2", error=str(exc), email=email,
                         status=400)
+        return signed_in(accounts.open_session(c, user["id"]))
+
+    @app.get("/confirm")
+    def confirm(request: Request, t: str = "", c=Depends(conn)):
+        user = verify.confirm(c, t)
+        return page(request, "cabinet/confirmed.html.j2", ok=user is not None,
+                    user=accounts.session_user(c, request.cookies.get(COOKIE)))
+
+    @app.post("/confirm/resend")
+    def confirm_resend(request: Request, csrf: str = Form(""), user=Depends(current),
+                       c=Depends(conn)):
+        check_csrf(user, csrf)
+        sent = verify.send_confirmation(c, user)
+        return page(request, "cabinet/notice.html.j2", user, title="Письмо",
+                    text=("Отправили письмо ещё раз на " + user["email"] + "." if sent else
+                          "Письмо уже отправлено недавно. Проверьте папку «Спам» или "
+                          "попробуйте через минуту."))
+
+    @app.get("/forgot")
+    def forgot_form(request: Request):
+        return page(request, "cabinet/forgot.html.j2")
+
+    @app.post("/forgot")
+    def forgot(request: Request, email: str = Form(""), c=Depends(conn)):
+        verify.request_reset(c, email)
+        return page(request, "cabinet/notice.html.j2", title="Проверьте почту",
+                    text="Если такой адрес зарегистрирован, на него ушло письмо со ссылкой. "
+                         "Ссылка действует час.")
+
+    @app.get("/reset")
+    def reset_form(request: Request, t: str = "", c=Depends(conn)):
+        if not verify.reset_valid(c, t):
+            return page(request, "cabinet/notice.html.j2", status=400, title="Ссылка устарела",
+                        text="Ссылка уже использована или прошёл час. Запросите новую на "
+                             "странице входа.")
+        return page(request, "cabinet/reset.html.j2", token=t)
+
+    @app.post("/reset")
+    def reset(request: Request, t: str = Form(""), password: str = Form(""), c=Depends(conn)):
+        try:
+            user = verify.reset(c, t, password)
+        except Refused as exc:
+            return page(request, "cabinet/reset.html.j2", status=400, token=t, error=str(exc))
         return signed_in(accounts.open_session(c, user["id"]))
 
     @app.get("/login")
