@@ -22,11 +22,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import subprocess
 import tempfile
 
-from yaseo_app import accounts, billing, db, history, mailer, monitor, report, score, verify
+from yaseo_app import accounts, beta, billing, db, history, mailer, monitor, report, score, verify
 from yaseo_app.accounts import Refused
 
 HERE = Path(__file__).parent
 COOKIE = "yaseo_session"
+PUBLIC_PATHS = {"/", "/example", "/robots.txt", "/sitemap.xml"}
 RENDER = HERE.parent.parent / "scripts" / "chrome-render.sh"
 SECTION_TITLES = {"demand": "Спрос в Wordstat", "positions": "Позиции в Яндексе",
                   "answers": "Ответы нейросети Яндекса"}
@@ -98,6 +99,8 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["Referrer-Policy"] = "same-origin"
         resp.headers["Cache-Control"] = "no-store"
+        if request.url.path not in PUBLIC_PATHS and not request.url.path.startswith("/legal/"):
+            resp.headers["X-Robots-Tag"] = "noindex, nofollow"
         return resp
 
     def conn(request: Request):
@@ -127,22 +130,82 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
     @app.get("/")
     def index(request: Request, c=Depends(conn)):
         user = accounts.session_user(c, request.cookies.get(COOKIE))
-        return RedirectResponse("/sites" if user else "/login", status_code=303)
+        if user:
+            return RedirectResponse("/sites", status_code=303)
+        return landing_page(request, c)
 
     @app.get("/signup")
-    def signup_form(request: Request):
-        return page(request, "cabinet/signup.html.j2")
+    def signup_form(request: Request, invite: str = "", site: str = ""):
+        return page(request, "cabinet/signup.html.j2", invite=invite, site=site,
+                    beta_on=beta.enabled())
 
     @app.post("/signup")
     def signup(request: Request, email: str = Form(""), password: str = Form(""),
-               consent: str = Form(""), c=Depends(conn)):
+               consent: str = Form(""), invite: str = Form(""), site: str = Form(""),
+               c=Depends(conn)):
         try:
             user = accounts.signup(c, email, password, consent == "yes",
-                                   ip=client_ip(request))
+                                   ip=client_ip(request), invite=invite or None)
         except Refused as exc:
             return page(request, "cabinet/signup.html.j2", error=str(exc), email=email,
-                        status=400)
-        return signed_in(accounts.open_session(c, user["id"]))
+                        invite=invite, site=site, beta_on=beta.enabled(), status=400)
+        target = "/sites"
+        if site.strip():
+            # Адрес, введённый на лендинге, сразу становится сайтом в кабинете.
+            try:
+                s_row = accounts.add_site(c, user, site, allow_private=allow_private)
+                target = f"/sites/{s_row['id']}"
+            except Refused:
+                pass
+        resp = signed_in(accounts.open_session(c, user["id"]))
+        resp.headers["Location"] = target
+        return resp
+
+    # --- лендинг --------------------------------------------------------------------
+
+    def landing_page(request, c, status=200, **ctx):
+        return page(request, "landing/index.html.j2", status=status, beta_on=beta.enabled(),
+                    plans=billing.plans(c), show_prices=os.environ.get("YASEO_SHOW_PRICES") == "1",
+                    request_base=str(request.base_url).rstrip("/"), **ctx)
+
+    @app.post("/waitlist")
+    def waitlist(request: Request, email: str = Form(""), site: str = Form(""),
+                 consent: str = Form(""), c=Depends(conn)):
+        try:
+            beta.join_waitlist(c, email, site, consent == "yes", source="лендинг")
+        except Refused as exc:
+            return landing_page(request, c, status=400, wl_error=str(exc), wl_email=email,
+                                wl_site=site)
+        return page(request, "landing/thanks.html.j2")
+
+    @app.get("/example")
+    def example():
+        """Пример отчёта — настоящий прогон по тестовому сайту из tests/site."""
+        import json
+        data = json.loads((HERE / "examples" / "test-site.json").read_text(encoding="utf-8"))
+        return HTMLResponse(report.render(data, kind="Пример на тестовом сайте"))
+
+    @app.get("/legal/{doc}")
+    def legal(request: Request, doc: str):
+        titles = {"offer": "Публичная оферта", "privacy": "Политика обработки персональных данных"}
+        if doc not in titles:
+            raise HTTPException(status_code=404)
+        return page(request, "landing/legal.html.j2", title=titles[doc])
+
+    @app.get("/robots.txt")
+    def robots(request: Request):
+        base = str(request.base_url).rstrip("/")
+        return Response("User-agent: *\nAllow: /$\nAllow: /example\nAllow: /legal/\n"
+                        "Disallow: /\n\nSitemap: " + base + "/sitemap.xml\n",
+                        media_type="text/plain")
+
+    @app.get("/sitemap.xml")
+    def sitemap(request: Request):
+        base = str(request.base_url).rstrip("/")
+        urls = "".join(f"<url><loc>{base}{p}</loc></url>" for p in ("/", "/example"))
+        return Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns='
+                        '"http://www.sitemaps.org/schemas/sitemap/0.9">' + urls + "</urlset>",
+                        media_type="application/xml")
 
     @app.get("/confirm")
     def confirm(request: Request, t: str = "", c=Depends(conn)):

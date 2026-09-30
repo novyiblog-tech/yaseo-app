@@ -259,3 +259,28 @@ CREATE TABLE IF NOT EXISTS email_tokens (
 );
 CREATE INDEX IF NOT EXISTS email_tokens_user ON email_tokens (user_id, purpose, created_at);
 CREATE INDEX IF NOT EXISTS users_signup_ip ON users (signup_ip, created_at);
+
+-- Закрытая бета (этап 6). При YASEO_BETA=1 регистрация только по коду приглашения.
+-- Код может дать тариф на срок — решение владельцев, по умолчанию не даёт.
+CREATE TABLE IF NOT EXISTS invites (
+    code       text PRIMARY KEY,
+    note       text,
+    max_uses   int NOT NULL DEFAULT 1,
+    used       int NOT NULL DEFAULT 0,
+    grant_plan text REFERENCES plans(code),
+    grant_days int,
+    expires_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_code text REFERENCES invites(code);
+
+-- Лист ожидания: почта с согласием, откуда пришёл и какой сайт хотел проверить.
+CREATE TABLE IF NOT EXISTS waitlist (
+    id          bigserial PRIMARY KEY,
+    email       text NOT NULL UNIQUE,
+    site        text,
+    source      text,
+    consent_at  timestamptz NOT NULL,
+    invited     text REFERENCES invites(code),
+    created_at  timestamptz NOT NULL DEFAULT now()
+);

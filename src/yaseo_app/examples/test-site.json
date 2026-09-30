@@ -1,0 +1,424 @@
+{
+ "schema": 1,
+ "url": "https://remont-obuvi.example/",
+ "engine": "0.1.4",
+ "collected_at": "2026-09-30T06:06:06+00:00",
+ "paid_calls": 0,
+ "audit": {
+  "root": "https://remont-obuvi.example/",
+  "crawled_at": "2026-09-30T06:06:05.236365+00:00",
+  "pages_crawled": 4,
+  "robots_txt": true,
+  "sitemap_urls": 0,
+  "pages": [
+   {
+    "url": "https://remont-obuvi.example/",
+    "status": 200,
+    "redirect_to": null,
+    "title": "Ремонт обуви в Краснодаре",
+    "title_len": 25,
+    "description": "Мастерская по ремонту обуви: набойки, прошивка, замена подошвы.",
+    "description_len": 63,
+    "h1": [
+     "Ремонт обуви"
+    ],
+    "canonical": "https://remont-obuvi.example/",
+    "robots_meta": null,
+    "og": {},
+    "schema_types": [],
+    "word_count": 10,
+    "images_total": 1,
+    "images_no_alt": 1,
+    "internal_links": [
+     "https://remont-obuvi.example/prices.html",
+     "https://remont-obuvi.example/contacts.html",
+     "https://remont-obuvi.example/missing.html"
+    ],
+    "external_links": [],
+    "error": null,
+    "redirect_chain": []
+   },
+   {
+    "url": "https://remont-obuvi.example/prices.html",
+    "status": 200,
+    "redirect_to": null,
+    "title": "Ремонт обуви в Краснодаре",
+    "title_len": 25,
+    "description": null,
+    "description_len": 0,
+    "h1": [
+     "Цены",
+     "Прайс"
+    ],
+    "canonical": null,
+    "robots_meta": null,
+    "og": {},
+    "schema_types": [],
+    "word_count": 7,
+    "images_total": 0,
+    "images_no_alt": 0,
+    "internal_links": [
+     "https://remont-obuvi.example/"
+    ],
+    "external_links": [],
+    "error": null,
+    "redirect_chain": []
+   },
+   {
+    "url": "https://remont-obuvi.example/contacts.html",
+    "status": 200,
+    "redirect_to": null,
+    "title": "Контакты мастерской",
+    "title_len": 19,
+    "description": "Адрес и телефон мастерской.",
+    "description_len": 27,
+    "h1": [],
+    "canonical": null,
+    "robots_meta": "noindex",
+    "og": {},
+    "schema_types": [],
+    "word_count": 4,
+    "images_total": 0,
+    "images_no_alt": 0,
+    "internal_links": [
+     "https://remont-obuvi.example/"
+    ],
+    "external_links": [],
+    "error": null,
+    "redirect_chain": []
+   },
+   {
+    "url": "https://remont-obuvi.example/missing.html",
+    "status": 404,
+    "redirect_to": null,
+    "title": null,
+    "title_len": 0,
+    "description": null,
+    "description_len": 0,
+    "h1": [],
+    "canonical": null,
+    "robots_meta": null,
+    "og": {},
+    "schema_types": [],
+    "word_count": 0,
+    "images_total": 0,
+    "images_no_alt": 0,
+    "internal_links": [],
+    "external_links": [],
+    "error": null,
+    "redirect_chain": []
+   }
+  ],
+  "issues": [
+   {
+    "severity": "critical",
+    "code": "broken-internal-link",
+    "url": "https://remont-obuvi.example/missing.html",
+    "evidence": "HTTP 404, ссылка со страниц: /",
+    "fix": "Поправить или снять ссылку — она ведёт в никуда"
+   },
+   {
+    "severity": "major",
+    "code": "duplicate-title",
+    "url": "https://remont-obuvi.example/",
+    "evidence": "дубль с /prices.html — title \"Ремонт обуви в Краснодаре\"",
+    "fix": "Переписать title под задачу конкретной страницы"
+   },
+   {
+    "severity": "major",
+    "code": "duplicate-title",
+    "url": "https://remont-obuvi.example/prices.html",
+    "evidence": "дубль с / — title \"Ремонт обуви в Краснодаре\"",
+    "fix": "Переписать title под задачу конкретной страницы"
+   },
+   {
+    "severity": "major",
+    "code": "missing-canonical",
+    "url": "https://remont-obuvi.example/contacts.html",
+    "evidence": "нет <link rel=\"canonical\">",
+    "fix": "Добавить canonical на сам адрес страницы"
+   },
+   {
+    "severity": "major",
+    "code": "missing-canonical",
+    "url": "https://remont-obuvi.example/prices.html",
+    "evidence": "нет <link rel=\"canonical\">",
+    "fix": "Добавить canonical на сам адрес страницы"
+   },
+   {
+    "severity": "major",
+    "code": "missing-description",
+    "url": "https://remont-obuvi.example/prices.html",
+    "evidence": "тега <meta name=\"description\"> нет",
+    "fix": "Добавить description на 120–170 символов"
+   },
+   {
+    "severity": "major",
+    "code": "missing-h1",
+    "url": "https://remont-obuvi.example/contacts.html",
+    "evidence": "тега <h1> на странице нет",
+    "fix": "Добавить один <h1> — заголовок страницы, не логотип"
+   },
+   {
+    "severity": "major",
+    "code": "multiple-h1",
+    "url": "https://remont-obuvi.example/prices.html",
+    "evidence": "2 тегов <h1>: \"Цены\" | \"Прайс\"",
+    "fix": "Оставить один <h1>, остальные понизить до <h2>"
+   },
+   {
+    "severity": "minor",
+    "code": "description-too-short",
+    "url": "https://remont-obuvi.example/",
+    "evidence": "description 63 симв: \"Мастерская по ремонту обуви: набойки, прошивка, замена подошвы.\"",
+    "fix": "Расширить до 120–170 символов"
+   },
+   {
+    "severity": "minor",
+    "code": "images-no-alt",
+    "url": "https://remont-obuvi.example/",
+    "evidence": "1 из 1 <img> без alt",
+    "fix": "Прописать alt: что на картинке, без перечисления ключей"
+   },
+   {
+    "severity": "minor",
+    "code": "missing-og",
+    "url": "https://remont-obuvi.example/",
+    "evidence": "нет og:title, og:description, og:image",
+    "fix": "Добавить og:title, og:description и og:image 1200×630"
+   },
+   {
+    "severity": "minor",
+    "code": "missing-og",
+    "url": "https://remont-obuvi.example/prices.html",
+    "evidence": "нет og:title, og:description, og:image",
+    "fix": "Добавить og:title, og:description и og:image 1200×630"
+   },
+   {
+    "severity": "minor",
+    "code": "missing-schema",
+    "url": "https://remont-obuvi.example/",
+    "evidence": "нет JSON-LD и microdata",
+    "fix": "Разметить страницу schema.org: Organization, Article, Service"
+   },
+   {
+    "severity": "minor",
+    "code": "missing-schema",
+    "url": "https://remont-obuvi.example/prices.html",
+    "evidence": "нет JSON-LD и microdata",
+    "fix": "Разметить страницу schema.org: Organization, Article, Service"
+   },
+   {
+    "severity": "minor",
+    "code": "noindex-not-checked",
+    "url": "https://remont-obuvi.example/",
+    "evidence": "1 страниц закрыты от индекса: /contacts.html",
+    "fix": "Ничего чинить не нужно: заголовки, описания, объём текста и og у них не проверялись — в выдачу они не идут"
+   },
+   {
+    "severity": "minor",
+    "code": "thin-content",
+    "url": "https://remont-obuvi.example/",
+    "evidence": "10 слов в тексте страницы",
+    "fix": "Дописать до 300+ слов по существу запроса"
+   },
+   {
+    "severity": "minor",
+    "code": "thin-content",
+    "url": "https://remont-obuvi.example/prices.html",
+    "evidence": "7 слов в тексте страницы",
+    "fix": "Дописать до 300+ слов по существу запроса"
+   },
+   {
+    "severity": "minor",
+    "code": "title-too-short",
+    "url": "https://remont-obuvi.example/",
+    "evidence": "title 25 симв: \"Ремонт обуви в Краснодаре\"",
+    "fix": "Расширить до 30–60 символов, добавить уточнение"
+   },
+   {
+    "severity": "minor",
+    "code": "title-too-short",
+    "url": "https://remont-obuvi.example/prices.html",
+    "evidence": "title 25 симв: \"Ремонт обуви в Краснодаре\"",
+    "fix": "Расширить до 30–60 символов, добавить уточнение"
+   }
+  ],
+  "error": null,
+  "robots_disallowed": [],
+  "sitemaps_skipped": [],
+  "sitemap_errors": []
+ },
+ "geo": {
+  "root": "https://remont-obuvi.example/",
+  "checked_at": "2026-09-30T06:06:06+00:00",
+  "llms_txt": "нет (HTTP 404)",
+  "llms_full_txt": "нет",
+  "robots_txt": "есть, 2 строк",
+  "bots": [
+   {
+    "token": "OAI-SearchBot",
+    "owner": "OpenAI",
+    "role": "search",
+    "allowed": true,
+    "evidence": "«стр. 1: User-agent: * → стр. 2: Allow: /»",
+    "note": "показ сайта в поиске ChatGPT; запрещённые сайты в ответах поиска ChatGPT не показываются (developers.openai.com/api/docs/bots)"
+   },
+   {
+    "token": "ChatGPT-User",
+    "owner": "OpenAI",
+    "role": "user",
+    "allowed": true,
+    "evidence": "«стр. 1: User-agent: * → стр. 2: Allow: /»",
+    "note": "заходы по запросу пользователя ChatGPT; OpenAI предупреждает, что robots.txt к ним может не применяться"
+   },
+   {
+    "token": "GPTBot",
+    "owner": "OpenAI",
+    "role": "training",
+    "allowed": true,
+    "evidence": "«стр. 1: User-agent: * → стр. 2: Allow: /»",
+    "note": "только обучение моделей OpenAI; на показ в поиске ChatGPT не влияет — за него отвечает OAI-SearchBot"
+   },
+   {
+    "token": "PerplexityBot",
+    "owner": "Perplexity",
+    "role": "search",
+    "allowed": true,
+    "evidence": "«стр. 1: User-agent: * → стр. 2: Allow: /»",
+    "note": "показ сайта в ответах Perplexity (docs.perplexity.ai/docs/resources/perplexity-crawlers)"
+   },
+   {
+    "token": "Perplexity-User",
+    "owner": "Perplexity",
+    "role": "user",
+    "allowed": true,
+    "evidence": "«стр. 1: User-agent: * → стр. 2: Allow: /»",
+    "note": "заходы по запросу пользователя; Perplexity пишет, что этот агент обычно не соблюдает robots.txt"
+   },
+   {
+    "token": "Claude-SearchBot",
+    "owner": "Anthropic",
+    "role": "search",
+    "allowed": true,
+    "evidence": "«стр. 1: User-agent: * → стр. 2: Allow: /»",
+    "note": "индексация для поиска Claude; запрет снижает видимость в ответах (privacy.claude.com, статья 8896518)"
+   },
+   {
+    "token": "Claude-User",
+    "owner": "Anthropic",
+    "role": "user",
+    "allowed": true,
+    "evidence": "«стр. 1: User-agent: * → стр. 2: Allow: /»",
+    "note": "заходы по запросу пользователя Claude; запрет не даёт подтянуть страницу в ответ"
+   },
+   {
+    "token": "ClaudeBot",
+    "owner": "Anthropic",
+    "role": "training",
+    "allowed": true,
+    "evidence": "«стр. 1: User-agent: * → стр. 2: Allow: /»",
+    "note": "сбор данных для обучения моделей Anthropic"
+   },
+   {
+    "token": "Google-Extended",
+    "owner": "Google",
+    "role": "training",
+    "allowed": true,
+    "evidence": "«стр. 1: User-agent: * → стр. 2: Allow: /»",
+    "note": "не влияет на Google Поиск и не является фактором ранжирования; управляет обучением Gemini и grounding в приложениях Gemini и Vertex AI (developers.google.com/crawling/docs/crawlers-fetchers/google-common-crawlers)"
+   },
+   {
+    "token": "YandexAdditional",
+    "owner": "Яндекс",
+    "role": "search",
+    "allowed": true,
+    "evidence": "«стр. 1: User-agent: * → стр. 2: Allow: /»",
+    "note": "ограничивает показ контента в быстрых ответах с YandexGPT и в ответах Поиска с Алисой (yandex.ru/support/webmaster/robot-workings/check-yandex-robots); страницы не сканирует"
+   },
+   {
+    "token": "YandexAdditionalBot",
+    "owner": "Яндекс",
+    "role": "search",
+    "allowed": true,
+    "evidence": "«стр. 1: User-agent: * → стр. 2: Allow: /»",
+    "note": "второй токен того же назначения, что YandexAdditional (та же справка Яндекса)"
+   }
+  ],
+  "pages": [
+   {
+    "url": "https://remont-obuvi.example/",
+    "status": 200,
+    "jsonld_types": [],
+    "faq": false,
+    "markdown_alternate": ""
+   },
+   {
+    "url": "https://remont-obuvi.example/prices.html",
+    "status": 200,
+    "jsonld_types": [],
+    "faq": false,
+    "markdown_alternate": ""
+   },
+   {
+    "url": "https://remont-obuvi.example/contacts.html",
+    "status": 200,
+    "jsonld_types": [],
+    "faq": false,
+    "markdown_alternate": ""
+   }
+  ],
+  "issues": [
+   {
+    "severity": "major",
+    "code": "llms-txt-missing",
+    "url": "https://remont-obuvi.example/llms.txt",
+    "evidence": "HTTP 404",
+    "fix": "Создайте /llms.txt: «# Название», «> краткое описание», разделы «## …» со ссылками на ключевые страницы (llmstxt.org)."
+   },
+   {
+    "severity": "major",
+    "code": "jsonld-missing",
+    "url": "https://remont-obuvi.example/",
+    "evidence": "блоков <script type=\"application/ld+json\"> на странице: 0",
+    "fix": "Добавьте JSON-LD schema.org: на главной — Organization (или LocalBusiness) и WebSite, на страницах услуг — Service, на страницах с вопросами — FAQPage."
+   },
+   {
+    "severity": "minor",
+    "code": "llms-full-txt-missing",
+    "url": "https://remont-obuvi.example/llms-full.txt",
+    "evidence": "HTTP 404",
+    "fix": "По желанию: соберите /llms-full.txt — полный текст ключевых страниц одним файлом. Это соглашение, а не часть спецификации."
+   },
+   {
+    "severity": "minor",
+    "code": "markdown-alternate-missing",
+    "url": "https://remont-obuvi.example/",
+    "evidence": "<link rel=\"alternate\" type=\"text/markdown\"> и заголовка Link с ним: 0",
+    "fix": "Отдавайте Markdown-версию страниц (page.md или index.html.md) и ссылайтесь на неё <link rel=\"alternate\" type=\"text/markdown\" href=\"…\"> — так советует llmstxt.org."
+   },
+   {
+    "severity": "minor",
+    "code": "jsonld-missing",
+    "url": "https://remont-obuvi.example/prices.html",
+    "evidence": "блоков <script type=\"application/ld+json\"> на странице: 0",
+    "fix": "Добавьте JSON-LD schema.org: на главной — Organization (или LocalBusiness) и WebSite, на страницах услуг — Service, на страницах с вопросами — FAQPage."
+   },
+   {
+    "severity": "minor",
+    "code": "jsonld-missing",
+    "url": "https://remont-obuvi.example/contacts.html",
+    "evidence": "блоков <script type=\"application/ld+json\"> на странице: 0",
+    "fix": "Добавьте JSON-LD schema.org: на главной — Organization (или LocalBusiness) и WebSite, на страницах услуг — Service, на страницах с вопросами — FAQPage."
+   },
+   {
+    "severity": "minor",
+    "code": "faq-schema-missing",
+    "url": "https://remont-obuvi.example/",
+    "evidence": "FAQPage на проверенных страницах: 0 из 3",
+    "fix": "На страницах с вопросами и ответами добавьте разметку FAQPage — ИИ-ответы охотно берут готовые пары «вопрос — ответ»."
+   }
+  ],
+  "good": []
+ }
+}

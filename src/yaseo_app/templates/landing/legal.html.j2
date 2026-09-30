@@ -1,0 +1,8 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}{{ title }}{% endblock %}
+{% block main %}
+<div class="stack" style="max-width:68ch">
+  <h1 style="text-transform:none">{{ title }}</h1>
+  <div class="note fake">Документ готовит юрист. Пока его нет, приём оплаты не открыт.</div>
+</div>
+{% endblock %}
