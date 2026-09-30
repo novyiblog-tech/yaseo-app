@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>yaSEO — проверка {{ host }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+{{ css|safe }}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="head">
+  <div>
+    <div class="wordmark">ya<b>SEO</b></div>
+    <h1 style="margin-top:14px">Проверка сайта {{ host }}</h1>
+    <p class="muted" style="margin-top:6px">{{ kind }}</p>
+  </div>
+  <div class="meta small muted">
+    <div>Снято {{ collected_at }}</div>
+    <div>{{ pages_crawled }} страниц проверено</div>
+  </div>
+</header>
+
+<div class="verdict">
+  <div>
+    <div class="score">
+      {% if total is not none %}
+      <div class="num">{{ total }}</div><div class="of">из 100</div>
+      {% else %}
+      <div class="num none">Не измерено</div>
+      {% endif %}
+    </div>
+    <p class="lead muted">{{ verdict_text }}</p>
+  </div>
+  <div class="lights">
+    {% for l in lights %}
+    <div class="light">
+      <div class="dot {{ l.color }}"></div>
+      <div><b>{{ l.name }}</b><div class="micro muted">{{ l.note }}</div></div>
+      {% if l.score is not none %}<div class="val">{{ l.score }}</div>{% else %}<div class="val none">не измерено</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<section>
+  <div class="sec-head"><span class="n">01</span><h2>Что сделать первым</h2></div>
+  {% if steps %}
+  <p class="muted" style="margin-bottom:20px">{{ steps|length }} шагов по убыванию важности. У каждого — что не так, что сделать, кто и сколько времени.</p>
+  <div class="steps">
+    {% for s in steps %}
+    <div class="step">
+      <div class="idx {{ s.severity }}">{{ loop.index }}</div>
+      <div>
+        <h3>{{ s.title }}</h3>
+        <p>{{ s.problem }}</p>
+        <p class="action">{{ s.action }}</p>
+        <div class="row">
+          <div><span>Кто</span>{{ s.who }}</div>
+          <div><span>Время</span>{{ s.time }}</div>
+          <div><span>Где</span>{{ s.pages }} {{ s.pages|pages_word }}</div>
+          <div><span>Важность</span><span class="tag {{ {'critical':'bad','major':'warn','minor':'quiet'}[s.severity] }}" style="display:inline-block">{{ {'critical':'срочно','major':'важно','minor':'мелочь'}[s.severity] }}</span></div>
+        </div>
+        <div class="evidence"><span class="muted">Доказательство:</span> <span class="mono">{{ s.urls[0]|short }}</span> — {{ s.evidence }}</div>
+        {% if s.effect %}<p class="small muted" style="margin-top:10px">Что изменится: {{ s.effect }}</p>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="pending"><h3>Находок нет</h3><p class="muted">По проверенным страницам замечаний не найдено.</p></div>
+  {% endif %}
+</section>
+
+<section>
+  <div class="sec-head"><span class="n">02</span><h2>Спрос</h2></div>
+  <div class="pending">
+    <h3>В бесплатной проверке не измеряется</h3>
+    <p class="muted">Сколько людей в месяц ищут ваши услуги и какую долю видите вы — считается по данным Вордстата в полном аудите.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="n">03</span><h2>Позиции и конкуренты</h2></div>
+  <div class="pending">
+    <h3>В бесплатной проверке не измеряется</h3>
+    <p class="muted">Где сайт стоит в поиске Яндекса по своим запросам и кто стоит выше — снимается в полном аудите.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="n">04</span><h2>Нейросети</h2></div>
+  <p class="muted" style="margin-bottom:20px">Могут ли нейросети прочитать сайт и понять, о чём он. Проверка без обращения к самим нейросетям.</p>
+  <table style="margin-bottom:20px">
+    <tr><th>Что</th><th>Состояние</th></tr>
+    <tr><td>robots.txt</td><td>{{ geo.robots_txt }}</td></tr>
+    <tr><td>llms.txt — путеводитель для нейросетей</td><td>{{ geo.llms_txt }}</td></tr>
+    <tr><td>llms-full.txt — полный текст</td><td>{{ geo.llms_full_txt }}</td></tr>
+  </table>
+  <h3 style="margin-bottom:10px">Боты нейросетей</h3>
+  <div class="bots">
+    {% for b in geo.bots %}
+    <div class="bot">
+      <div class="dot {{ 'green' if b.allowed else ('red' if b.role == 'search' else ('yellow' if b.role == 'user' else 'grey')) }}"></div>
+      <div><b>{{ b.owner }} · {{ b.token }}</b><span class="small muted">{{ {'search':'показ в ответах','user':'заход по просьбе пользователя','training':'обучение моделей'}[b.role] }} — {{ 'разрешён' if b.allowed else 'закрыт' }}</span></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if geo.good %}
+  <h3 style="margin:20px 0 8px">Что уже хорошо</h3>
+  <div class="issues">{% for g in geo.good %}<div class="issue"><span class="tag" style="justify-self:start">есть</span><span class="small">{{ g }}</span></div>{% endfor %}</div>
+  {% endif %}
+</section>
+
+<section>
+  <div class="sec-head"><span class="n">05</span><h2>Техника по страницам</h2></div>
+  <p class="muted" style="margin-bottom:16px">Для специалиста: что увидел робот на каждой проверенной странице.</p>
+  <table>
+    <tr><th>Страница</th><th>Код</th><th class="num">Заголовок</th><th class="num">Описание</th><th class="num">H1</th><th>Основной адрес</th><th class="num">Слов</th><th class="num">Картинок без подписи</th></tr>
+    {% for p in pages %}
+    <tr{% if p.status is none or p.status >= 400 %} class="bad"{% endif %}>
+      <td class="mono">{{ p.url|short }}</td>
+      <td><span class="status{% if p.status is none or p.status >= 400 %} err{% endif %}">{{ p.status if p.status is not none else '—' }}</span></td>
+      <td class="num">{{ p.title_len or '—' }}</td>
+      <td class="num">{{ p.description_len or '—' }}</td>
+      <td class="num">{{ p.h1|length }}</td>
+      <td class="mono">{{ p.canonical|short if p.canonical else '—' }}</td>
+      <td class="num">{{ p.word_count }}</td>
+      <td class="num">{{ p.images_no_alt }}/{{ p.images_total }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h3 style="margin:28px 0 10px">Все находки — {{ issues|length }}</h3>
+  <div class="issues">
+    {% for i in issues %}
+    <div class="issue">
+      <span class="tag {{ {'critical':'bad','major':'warn','minor':'quiet'}[i.severity] }}" style="justify-self:start">{{ {'critical':'срочно','major':'важно','minor':'мелочь'}[i.severity] }}</span>
+      <div><b>{{ i.title }}</b> <span class="mono muted">{{ i.url|short }}</span><div class="muted">{{ i.evidence }}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="n">06</span><h2>Как считали</h2></div>
+  <p>Сайт обошёл наш робот: до {{ max_pages }} страниц по ссылкам с главной и из карты сайта. Каждая находка держится на цитате из страницы — код ответа, длина тега, адрес дубля. Готовность к нейросетям проверена по robots.txt, llms.txt и разметке {{ geo.pages|length }} страниц.</p>
+  <p style="margin-top:10px">Оценка: срочная находка весит 10, важная 3, мелочь 1. Техника — штраф на страницу, нейросети — на сайт. Зелёный от 80, жёлтый от 50. Что не измерялось, в оценку не входит. Гарантий позиций нет и быть не может: порядок выдачи определяет Яндекс.</p>
+</section>
+
+<footer class="foot">
+  <span>yaSEO · движок yaseo {{ engine }}</span>
+  <span>{{ collected_at }}</span>
+</footer>
+
+</div>
+</body>
+</html>

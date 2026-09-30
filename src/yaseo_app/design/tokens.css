@@ -1,0 +1,64 @@
+/* yaSEO — дизайн-система, токены. Один акцент — кислотный лайм. Две темы:
+   тёмная для кабинета и лендинга, светлая кремовая для отчёта и PDF.
+   Шрифт — временный (Manrope), заменится на фирменный одним токеном. */
+
+:root {
+  --font-display: "Manrope", "Helvetica Neue", Arial, sans-serif;
+  --font-text: "Manrope", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
+
+  --lime: #c8ff00;
+  --lime-ink: #1a2400;          /* текст поверх лайма */
+  --black: #0a0a0a;
+  --cream: #f3efe6;
+
+  /* светофоры — не спорят с акцентом */
+  --ok: #1f9d55;
+  --warn: #e0a100;
+  --bad: #d7383e;
+  --none: #8e8e8e;
+
+  --radius: 6px;
+  --radius-lg: 14px;
+  --gap: 8px;
+  --measure: 68ch;
+
+  --size-hero: clamp(64px, 12vw, 128px);
+  --size-h1: clamp(28px, 4vw, 40px);
+  --size-h2: 22px;
+  --size-body: 15px;
+  --size-small: 13px;
+  --size-micro: 11px;
+
+  --page-width: 1040px;
+}
+
+/* тёмная тема: кабинет, лендинг */
+[data-theme="dark"] {
+  --bg: var(--black);
+  --surface: #141414;
+  --surface-2: #1d1d1d;
+  --line: #2a2a2a;
+  --ink: #f2f2f2;
+  --ink-2: #a3a3a3;
+  --ink-3: #6b6b6b;
+  --accent: var(--lime);
+  --accent-ink: var(--lime-ink);
+}
+
+/* светлая тема: отчёт, PDF */
+[data-theme="light"] {
+  --bg: var(--cream);
+  --surface: #fffdf8;
+  --surface-2: #ebe6da;
+  --line: #d9d3c4;
+  --ink: #111111;
+  --ink-2: #5b5b5b;
+  --ink-3: #8a8a8a;
+  --accent: var(--lime);
+  --accent-ink: var(--lime-ink);
+}
+
+@media print {
+  [data-theme="light"] { --bg: #ffffff; --surface: #ffffff; --surface-2: #f1eee6; }
+}
