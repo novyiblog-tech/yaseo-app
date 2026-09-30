@@ -51,7 +51,7 @@
     <h2>История</h2>
     {% if jobs %}
     <table>
-      <thead><tr><th>№</th><th>Статус</th><th class="num">Оценка</th><th class="num">Фраз</th><th class="num">Запущена</th><th class="num">Расход</th></tr></thead>
+      <thead><tr><th>№</th><th>Статус</th><th class="num">Оценка</th><th class="num">Фраз</th><th class="num">Запущена</th></tr></thead>
       <tbody>
       {% for j in jobs %}
         <tr>
@@ -60,7 +60,6 @@
           <td class="num"><span class="score-xs {{ color_of(j.score) }}">{{ j.score if j.score is not none else '—' }}</span></td>
           <td class="num muted">{{ j.queries or '—' }}</td>
           <td class="num muted">{{ j.created_at|dt }}</td>
-          <td class="num">{{ j.cost_rub|money }}</td>
         </tr>
       {% endfor %}
       </tbody>
