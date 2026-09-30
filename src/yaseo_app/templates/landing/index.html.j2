@@ -26,7 +26,7 @@
 
   <div class="l-stage">
   <img class="l-rock" src="{{ 'rock-hero.webp'|img }}" alt="" width="728" height="1152" fetchpriority="high">
-  <a class="l-sample card" href="/example" target="_blank" rel="noopener" aria-label="Открыть пример отчёта">
+  <a class="l-sample card" href="/example" aria-label="Открыть пример отчёта">
     <span class="muted small">Пример отчёта · тестовый сайт мастерской</span>
     <span class="l-sample-score">24<small>/100</small></span>
     <span class="l-sample-lights">
@@ -81,11 +81,16 @@
   <p class="l-kick">05 / 06</p>
   <h2 class="l-h2">Тарифы <span class="acc">и&nbsp;лимиты</span></h2>
   <p class="plans-hint" aria-hidden="true">Листайте вбок <span>→</span></p>
-  <div class="plans">
+  <div class="plans l-plans">
     {% for t in plans %}
-    <div class="plan"><h3>{{ t.title }}</h3>
+    <div class="plan l-plan"><h3>{{ t.title }}</h3>
       {{ price(t) }}
-      <ul class="plain small">{{ features(t) }}</ul></div>
+      <ul class="plain small">{{ features(t) }}</ul>
+      {# вся карточка нажимается: ссылка кнопки растянута на неё (.l-plan a::after) #}
+      <div class="plan-foot">
+      {% if t.period == 'free' %}<a class="btn ghost" href="/signup">Начать бесплатно</a>
+      {% else %}<a class="btn" href="/signup?plan={{ t.code }}">{{ 'Купить' if t.period == 'once' else 'Выбрать' }}</a>{% endif %}
+      </div></div>
     {% endfor %}
   </div>
   <p class="muted small" style="margin-top:14px">Цены в рублях{% if vat_note %}, {{ vat_note }}{% endif %}. Месяц — 30 дней с оплаты. Тариф сам не продлевается: напомним письмом за 3 дня, автопродление — только если включите его сами. Условия — в <a href="/legal/offer">оферте</a>.</p>

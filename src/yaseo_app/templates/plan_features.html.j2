@@ -1,18 +1,18 @@
 {# Состав тарифа — один на лендинге и в кабинете. #}
 {% macro features(t) %}
 <li>{{ t.sites }} {{ t.sites|plural('сайт', 'сайта', 'сайтов') }}</li>
-<li>{% if t.period == 'free' %}проверка раз в {{ t.free_every_days }} дней{% elif t.period == 'once' %}{{ t.audits_per_period }} полный аудит{% else %}{{ t.audits_per_period }} {{ t.audits_per_period|plural('полный аудит', 'полных аудита', 'полных аудитов') }} в месяц{% endif %}</li>
+<li>{% if t.period == 'free' %}проверка раз в {{ t.free_every_days }} дней{% elif t.period == 'once' %}{{ t.audits_per_period }} полный аудит{% if t.terms %} на 30 дней{% endif %}{% else %}{{ t.audits_per_period }} {{ t.audits_per_period|plural('полный аудит', 'полных аудита', 'полных аудитов') }} в месяц{% endif %}</li>
 {% if t.max_pages %}<li>до {{ t.max_pages }} {{ t.max_pages|plural('страницы', 'страниц', 'страниц') }} в проверке</li>{% endif %}
-<li>{% if t.queries_per_audit %}до {{ t.queries_per_audit }} {{ t.queries_per_audit|plural('фразы', 'фраз', 'фраз') }}: спрос и место в Яндексе{% else %}<span class="muted">без фраз — только сайт</span>{% endif %}</li>
-<li>{% if t.ai_checks %}{{ t.ai_checks }} {{ t.ai_checks|plural('ответ', 'ответа', 'ответов') }} нейросети Яндекса{% if t.period == 'month' %} в месяц{% endif %}{% else %}<span class="muted">без нейросети</span>{% endif %}</li>
-{% if t.tracked_queries %}<li>место в Яндексе каждый день — {{ t.tracked_queries|num }} фраз</li>{% endif %}
-<li>{% if t.steps_shown %}первые {{ t.steps_shown }} {{ t.steps_shown|plural('шаг', 'шага', 'шагов') }} плана исправлений{% else %}полный план исправлений{% endif %}</li>
+<li>{% if t.queries_per_audit %}до {{ t.queries_per_audit }} {{ t.queries_per_audit|plural('фразы', 'фраз', 'фраз') }}: спрос и позиции{% else %}<span class="muted">без фраз — только сайт</span>{% endif %}</li>
+<li>{% if t.ai_checks %}{{ t.ai_checks }} {{ t.ai_checks|plural('ответ', 'ответа', 'ответов') }} нейросети{% if t.period == 'month' %} в месяц{% endif %}{% else %}<span class="muted">без нейросети</span>{% endif %}</li>
+{% if t.tracked_queries %}<li>позиции каждый день: {{ t.tracked_queries|num }} фраз</li>{% endif %}
+<li>{% if t.steps_shown %}{{ t.steps_shown }} {{ t.steps_shown|plural('первый шаг', 'первых шага', 'первых шагов') }} плана{% else %}полный план исправлений{% endif %}</li>
 <li>{% if t.pdf %}PDF отчёта{% else %}<span class="muted">отчёт на экране</span>{% endif %}</li>
-{% if t.weekly_digest %}<li>письмо недели «что изменилось»</li>{% endif %}
+{% if t.weekly_digest %}<li>письмо «что изменилось»</li>{% endif %}
 {% if t.white_label %}<li>свой логотип в отчёте</li>{% endif %}
 {% endmacro %}
 
 {% macro price(t) %}
 <div class="price">{{ t.price_rub|rub }}{% if t.period == 'month' %}<span>/мес</span>{% elif t.period == 'once' %}<span> разово</span>{% endif %}</div>
-{% for x in t.terms %}<p class="term-note">или {{ x.price_rub|rub }} за {{ x.months }} {{ x.months|plural('месяц', 'месяца', 'месяцев') }} — выгода {{ x.saving|rub }}</p>{% endfor %}
+{% for x in t.terms %}<p class="term-note">{{ x.price_rub|rub }} за {{ x.months }} {{ x.months|plural('месяц', 'месяца', 'месяцев') }} — выгода {{ x.saving|rub }}</p>{% endfor %}
 {% endmacro %}

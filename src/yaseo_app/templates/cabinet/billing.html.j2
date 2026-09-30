@@ -26,7 +26,7 @@
     {% elif p.period == 'once' %}Действует до {{ cur.end|dt }}, без продления.
     {% elif cur.sub.auto_renew %}Продлится автоматически {{ cur.end|dt }}. Выключить — в <a href="/settings#renew">настройках</a>.
     {% else %}Действует до {{ cur.end|dt }}. Сам не продлится — напомним письмом за 3 дня.{% endif %}
-    {% if p.period == 'month' and cur.sub.months > 1 %}Оплачено на {{ cur.sub.months }} {{ cur.sub.months|plural('месяц', 'месяца', 'месяцев') }}: лимиты обновляются каждые 30 дней, следующее обновление {{ (cur.start + period)|dt }}.{% endif %}
+    {% if p.period in ('month', 'once') and cur.sub.months > 1 %}Оплачено на {{ cur.sub.months }} {{ cur.sub.months|plural('месяц', 'месяца', 'месяцев') }}: лимиты обновляются каждые 30 дней, следующее обновление {{ (cur.start + period)|dt }}.{% endif %}
     </p>
     <div class="meters">
       {{ meter('Сайты', use.sites, p.sites) }}
@@ -51,7 +51,7 @@
     <input type="hidden" name="csrf" value="{{ user.csrf }}">
     <div class="plans">
       {% for t in plans %}
-      <div class="plan{% if t.code == p.code %} current{% endif %}">
+      <div class="plan{% if t.code == p.code %} current{% endif %}" id="plan-{{ t.code }}">
         <h3>{{ t.title }}</h3>
         {{ price(t) }}
         <ul class="plain small">{{ features(t) }}</ul>
@@ -68,7 +68,7 @@
             {% if t.code == p.code %}<span class="plan-state">✓ ваш тариф · продлить</span>{% endif %}
             {% for q in o.options %}
             <button class="btn{% if t.code == p.code or q.months > 1 %} ghost{% endif %}" type="submit" name="choice" value="{{ t.code }}:{{ q.months }}">
-              {% if t.period == 'once' %}Купить — {{ q.amount|rub }}{% else %}{{ term_label(q.months) }} — {{ q.amount|rub }}{% endif %}</button>
+              {% if t.period == 'once' and q.months == 1 %}Купить — {{ q.amount|rub }}{% else %}{{ term_label(q.months) }} — {{ q.amount|rub }}{% endif %}</button>
             {% endfor %}
             {% set up = o.options|selectattr('kind', 'equalto', 'upgrade')|first %}
             {% if up and up.credit %}<p class="plan-why">Доплата с зачётом {{ up.credit|rub }} за оставшиеся дни «{{ p.title }}». Новый срок — с оплаты.</p>{% endif %}

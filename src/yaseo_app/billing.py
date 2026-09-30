@@ -7,6 +7,7 @@
 
 Сроки (Сергей, 30.09.2026):
 - тариф оплачивается на месяц (30 дней) или на 3 месяца; лимиты — на каждые 30 дней срока;
+  разовый аудит на 3 месяца — по полному аудиту на каждые 30 дней (01.10.2026);
 - сам срок не продлевается: письмо за 3 дня до конца и в день окончания, продлить можно
   в кабинете — новый срок добавляется к текущему;
 - автопродление — только если человек сам включил его с отдельным согласием;
@@ -73,8 +74,8 @@ def plan(conn: psycopg.Connection, code: str) -> dict:
 def term_price(conn: psycopg.Connection, p: dict, months: int) -> Decimal:
     if months == 1:
         return p["price_rub"]
-    if p["period"] != "month":
-        raise Refused("Этот тариф покупается только на один раз.")
+    if p["period"] not in ("month", "once"):
+        raise Refused("Этот тариф не покупается на срок.")
     row = conn.execute("SELECT price_rub FROM plan_terms WHERE plan = %s AND months = %s",
                        (p["code"], months)).fetchone()
     if row is None:
@@ -267,9 +268,13 @@ def provider(conn: psycopg.Connection) -> Provider:
 
 def credit(conn: psycopg.Connection, cur: dict) -> Decimal:
     """Сколько стоят неиспользованные полные дни текущего срока: цена срока последней
-    оплаты, делённая на его дни. Разовый аудит и бесплатные тарифы не засчитываются."""
+    оплаты, делённая на его дни. Бесплатные тарифы и разовый аудит на месяц не засчитываются:
+    он и есть одна проверка. Разовый аудит на 3 месяца засчитывается, как месячный (01.10.2026)."""
     sub = cur["sub"]
-    if cur["plan"]["period"] != "month" or sub is None or cur["end"] is None:
+    if sub is None or cur["end"] is None:
+        return Decimal(0)
+    period = cur["plan"]["period"]
+    if period != "month" and not (period == "once" and sub["months"] > 1):
         return Decimal(0)
     pay = conn.execute(
         "SELECT * FROM payments WHERE user_id = %s AND plan = %s AND status = 'succeeded'"

@@ -84,8 +84,6 @@ class BillingTest(PgTestCase):
         for code in ("free", "promo", "beta"):
             with self.assertRaises(Refused):
                 billing.start_purchase(self.conn, self.u, code, self.prov, "/r")
-        with self.assertRaises(Refused):
-            billing.start_purchase(self.conn, self.u, "once", self.prov, "/r", months=3)
 
     def test_three_months_price_and_monthly_limits(self):
         _, pay = self.buy("start", months=3)
@@ -104,6 +102,21 @@ class BillingTest(PgTestCase):
         self.conn.execute("UPDATE jobs SET created_at = created_at - interval '31 days'")
         accounts.start_check(self.conn, self.u, site)
         self.assertEqual(self.plan_now(), "start")
+
+    def test_once_for_three_months_gives_audit_per_window(self):
+        _, pay = self.buy("once", months=3)
+        self.assertEqual(pay["amount_rub"], 4990)
+        sub = self.sub()
+        self.assertEqual((sub["period_end"] - sub["period_start"]).days, 90)
+        site = accounts.add_site(self.conn, self.u, "http://a.example", allow_private=True)
+        jid = accounts.start_check(self.conn, self.u, site)
+        self.conn.execute("UPDATE jobs SET status = 'done' WHERE id = %s", (jid,))
+        with self.assertRaises(Refused):
+            accounts.start_check(self.conn, self.u, site)
+        self.shift(31)
+        self.conn.execute("UPDATE jobs SET created_at = created_at - interval '31 days'")
+        accounts.start_check(self.conn, self.u, site)
+        self.assertEqual(self.plan_now(), "once")
 
     def test_renewal_adds_to_current_term(self):
         self.buy("pro")
@@ -132,6 +145,18 @@ class BillingTest(PgTestCase):
         # зачёт после перехода считается от полной цены срока, а не от доплаты
         self.shift(15)
         self.assertEqual(billing.quote(self.conn, self.u, "agency")["credit"], 4990 * 14 // 30)
+
+    def test_upgrade_from_once_credits_only_three_months(self):
+        self.buy("once")             # разовый на месяц — это одна проверка, в зачёт не идёт
+        self.assertEqual(billing.quote(self.conn, self.u, "start")["credit"], 0)
+
+    def test_upgrade_from_three_month_once_credits_unused_days(self):
+        self.buy("once", months=3)   # 4 990 ₽ за 90 дней
+        self.shift(10)               # осталось 79 полных дней — 79 × 55,44 ₽
+        with self.assertRaises(Refused):
+            billing.quote(self.conn, self.u, "start")  # остаток больше цены месяца
+        q = billing.quote(self.conn, self.u, "start", months=3)
+        self.assertEqual((q["kind"], q["credit"], q["amount"]), ("upgrade", 4380, 7990 - 4380))
 
     def test_downgrade_waits_for_term_end(self):
         self.buy("pro")
@@ -248,6 +273,9 @@ class BillingWebTest(PgTestCase):
             page = c.get("/billing").text
             self.assertIn("Проверка", page)
             self.assertIn("7 990 ₽ за 3 месяца", page)
+            self.assertIn('value="once:1"', page)
+            self.assertIn('value="once:3"', page)  # разовый аудит — и на 3 месяца
+            self.assertIn("3 месяца — 4\xa0990", page)
             r = c.post("/billing/buy", data={"choice": "pro:3", "csrf": csrf(page)})
             self.assertIn("виртуальный платёжный сервис", r.text)
             self.assertIn("13\xa0490", r.text)

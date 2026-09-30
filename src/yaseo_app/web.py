@@ -31,6 +31,7 @@ from yaseo_app.accounts import Refused
 
 HERE = Path(__file__).parent
 IMAGES = HERE / "design" / "img"
+ICONS = {"/favicon.ico": "image/x-icon", "/apple-touch-icon.png": "image/png"}
 COOKIE = "yaseo_session"
 PUBLIC_PATHS = {"/", "/example", "/robots.txt", "/sitemap.xml"}
 RENDER = HERE.parent.parent / "scripts" / "chrome-render.sh"
@@ -152,8 +153,8 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         resp.headers["Content-Security-Policy"] = CSP
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["Referrer-Policy"] = "same-origin"
-        resp.headers["Cache-Control"] = ("public, max-age=86400" if request.url.path.startswith("/img/")
-                                         else "no-store")
+        static = request.url.path.startswith("/img/") or request.url.path in ICONS
+        resp.headers["Cache-Control"] = "public, max-age=86400" if static else "no-store"
         if request.url.path not in PUBLIC_PATHS and not request.url.path.startswith("/legal/"):
             resp.headers["X-Robots-Tag"] = "noindex, nofollow"
         return resp
@@ -199,21 +200,24 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         return landing_page(request, c)
 
     @app.get("/signup")
-    def signup_form(request: Request, promo: str = "", invite: str = "", site: str = ""):
-        # invite — ссылки из писем времён беты
-        return page(request, "cabinet/signup.html.j2", promo=promo or invite, site=site)
+    def signup_form(request: Request, promo: str = "", invite: str = "", site: str = "",
+                    plan: str = "", c=Depends(conn)):
+        # invite — ссылки из писем времён беты; plan — тариф, выбранный на лендинге
+        return page(request, "cabinet/signup.html.j2", promo=promo or invite, site=site,
+                    chosen=chosen_plan(c, plan))
 
     @app.post("/signup")
     def signup(request: Request, email: str = Form(""), password: str = Form(""),
                consent: str = Form(""), offer: str = Form(""), promo: str = Form(""),
-               site: str = Form(""), c=Depends(conn)):
+               site: str = Form(""), plan: str = Form(""), c=Depends(conn)):
+        chosen = chosen_plan(c, plan)
         try:
             user = accounts.signup(c, email, password, consent == "yes",
                                    ip=client_ip(request), promo=promo or None,
                                    offer=offer == "yes")
         except Refused as exc:
             return page(request, "cabinet/signup.html.j2", error=str(exc), email=email,
-                        promo=promo, site=site, status=400)
+                        promo=promo, site=site, chosen=chosen, status=400)
         target = "/sites"
         if site.strip():
             # Адрес, введённый на лендинге, сразу становится сайтом в кабинете.
@@ -222,9 +226,16 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
                 target = f"/sites/{s_row['id']}"
             except Refused:
                 pass
+        if chosen:
+            # тариф выбрали на лендинге — сразу к нему на странице оплаты
+            target = f"/billing#plan-{chosen['code']}"
         resp = signed_in(accounts.open_session(c, user["id"]))
         resp.headers["Location"] = target
         return resp
+
+    def chosen_plan(c, code: str):
+        """Платный тариф из ссылки лендинга; бесплатный и неизвестный — не выбор."""
+        return next((t for t in billing.plans(c) if t["code"] == code and t["period"] != "free"), None)
 
     # --- лендинг --------------------------------------------------------------------
 
@@ -258,6 +269,12 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         if not name.endswith(".webp") or "/" in name or name.startswith(".") or not path.is_file():
             raise HTTPException(status_code=404)
         return Response(path.read_bytes(), media_type="image/webp")
+
+    @app.get("/favicon.ico")
+    @app.get("/apple-touch-icon.png")
+    def icon(request: Request):
+        name = request.url.path.lstrip("/")
+        return Response((IMAGES / name).read_bytes(), media_type=ICONS[request.url.path])
 
     @app.get("/robots.txt")
     def robots(request: Request):

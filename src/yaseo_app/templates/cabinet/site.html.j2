@@ -98,15 +98,17 @@
     <h2>История</h2>
     {% if jobs %}
     <table>
-      <thead><tr><th>№</th><th>Статус</th><th class="num">Оценка</th><th class="num">Фраз</th><th class="num">Запущена</th></tr></thead>
+      <thead><tr><th>№</th><th>Статус</th><th class="num">Оценка</th><th class="num">Фраз</th><th class="num">Запущена</th><th></th></tr></thead>
       <tbody>
       {% for j in jobs %}
-        <tr>
-          <td><a href="/jobs/{{ j.id }}">{{ j.id }}</a></td>
+        {# вся строка — ссылка на проверку (a::after растянут на строку) #}
+        <tr class="row-link">
+          <td><a href="/jobs/{{ j.id }}" aria-label="Проверка № {{ j.id }} от {{ j.created_at|dt }}">{{ j.id }}</a></td>
           <td><span class="pill {{ j.status }}">{{ STATUS_TITLES[j.status] }}</span>{% if j.sources_mode == 'fake' %} <span class="pill">виртуальные данные</span>{% endif %}</td>
           <td class="num"><span class="score-xs {{ color_of(j.score) }}">{{ j.score if j.score is not none else '—' }}</span></td>
           <td class="num muted">{{ j.queries or '—' }}</td>
           <td class="num muted">{{ j.created_at|dt }}</td>
+          <td class="num row-go" aria-hidden="true">Открыть →</td>
         </tr>
       {% endfor %}
       </tbody>

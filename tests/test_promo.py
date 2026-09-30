@@ -185,7 +185,8 @@ class PlansAndOfferTest(PgTestCase):
                          ["free", "once", "start", "pro", "agency"], "промокод и бета не продаются")
         terms = {(t["plan"], t["months"]): t["price_rub"]
                  for t in self.conn.execute("SELECT * FROM plan_terms")}
-        self.assertEqual(terms, {("start", 3): 7990, ("pro", 3): 13490, ("agency", 3): 34490})
+        self.assertEqual(terms, {("once", 3): 4990, ("start", 3): 7990, ("pro", 3): 13490,
+                                 ("agency", 3): 34490})
 
     def test_plans_migration_runs_once(self):
         """Правка цифр в базе после выкладки не затирается."""

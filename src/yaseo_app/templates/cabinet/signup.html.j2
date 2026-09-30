@@ -4,9 +4,11 @@
 <div class="auth card">
   <h1>Регистрация</h1>
   <p class="muted small">Уже есть кабинет? <a href="/login">Войдите</a>.{% if site %} После регистрации сразу добавим {{ site }}.{% endif %}</p>
+  {% if chosen %}<p class="note" style="margin-top:14px">Тариф «{{ chosen.title }}» — оплатить можно сразу после регистрации, на странице тарифа.</p>{% endif %}
   {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
   <form method="post" action="/signup">
     <input type="hidden" name="site" value="{{ site or '' }}">
+    <input type="hidden" name="plan" value="{{ chosen.code if chosen else '' }}">
     <div class="field"><label for="email">Почта</label>
       <input id="email" type="email" name="email" value="{{ email or '' }}" autocomplete="email" required></div>
     <div class="field"><label for="password">Пароль, не короче 10 знаков</label>

@@ -358,6 +358,9 @@ CREATE TABLE IF NOT EXISTS plan_terms (
 INSERT INTO plan_terms (plan, months, price_rub) VALUES
     ('start', 3, 7990), ('pro', 3, 13490), ('agency', 3, 34490)
 ON CONFLICT (plan, months) DO NOTHING;
+-- Разовый аудит на 3 месяца: по полному аудиту на каждые 30 дней (Сергей, 01.10.2026).
+INSERT INTO plan_terms (plan, months, price_rub) VALUES ('once', 3, 4990)
+ON CONFLICT (plan, months) DO NOTHING;
 
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS months int NOT NULL DEFAULT 1;
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS auto_renew_consent_at timestamptz;
