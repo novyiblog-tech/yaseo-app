@@ -63,12 +63,15 @@ def _mine(cur: psycopg.Cursor, job_id: int) -> None:
         raise LeaseLost(f"задача {job_id} больше не за этим исполнителем")
 
 
-def finish(conn: psycopg.Connection, job: dict, result: dict) -> None:
+def finish(conn: psycopg.Connection, job: dict, result: dict,
+           summary: dict | None = None) -> None:
+    summary = summary or {}
     cur = conn.execute(
         "UPDATE jobs SET status = 'done', result = %s, error = NULL, finished_at = now(),"
-        " locked_by = NULL, locked_until = NULL"
+        " locked_by = NULL, locked_until = NULL, score = %s, lights = %s"
         " WHERE id = %s AND locked_by = %s AND status = 'running'",
-        (Jsonb(result), job["id"], job["locked_by"]),
+        (Jsonb(result), summary.get("score"), Jsonb(summary.get("lights")),
+         job["id"], job["locked_by"]),
     )
     _mine(cur, job["id"])
 

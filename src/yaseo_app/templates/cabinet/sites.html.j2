@@ -1,34 +1,43 @@
 {% extends "cabinet/base.html.j2" %}
-{% block title %}Сайты{% endblock %}
+{% block title %}Мои сайты{% endblock %}
 {% block main %}
 <div class="stack">
-  <h1>Сайты</h1>
+  <h1>Мои сайты</h1>
+  {% if sites %}
+  <div class="tiles">
+    {% for s in sites %}
+    <a class="tile" href="/sites/{{ s.id }}">
+      <div class="tile-top">
+        <span class="tile-url">{{ s.url }}</span>
+        {% if s.last_status in ('queued', 'running') %}<span class="pill {{ s.last_status }}">{{ STATUS_TITLES[s.last_status] }}</span>{% endif %}
+      </div>
+      <div class="tile-score">
+        <span class="score-sm {{ color_of(s.score) }}">{{ s.score if s.score is not none else '—' }}</span>
+        {% if s.delta %}<span class="delta {{ 'up' if s.delta > 0 else 'down' }}">{{ '+' if s.delta > 0 }}{{ s.delta }}</span>{% endif %}
+        <span class="spark-wrap">{{ s.spark|safe }}</span>
+      </div>
+      {% if s.lights %}
+      <div class="tile-lights">
+        {% for key, name in (('tech', 'Техника'), ('yandex', 'Яндекс'), ('ai', 'Нейросети')) %}
+        <span><span class="dot {{ color_of(s.lights[key]) }}"></span>{{ name }} {{ s.lights[key] if s.lights[key] is not none else '—' }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <div class="muted small">{% if s.last_job_id %}Последняя проверка {{ s.last_at|dt }}{% else %}Проверок ещё не было{% endif %}</div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card empty">Добавьте первый сайт — проверка займёт пару минут.</div>
+  {% endif %}
   <form class="card" method="post" action="/sites">
     <input type="hidden" name="csrf" value="{{ user.csrf }}">
     <div class="row">
-      <div class="field grow" style="margin-top:0"><label for="url">Адрес сайта</label>
+      <div class="field grow" style="margin-top:0"><label for="url">Добавить сайт</label>
         <input id="url" type="text" name="url" value="{{ url or '' }}" placeholder="example.ru" required></div>
       <button class="btn" type="submit">Добавить</button>
     </div>
     {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
   </form>
-  {% if sites %}
-  <div class="card table-scroll">
-    <table>
-      <thead><tr><th>Сайт</th><th>Последняя проверка</th><th class="num">Когда</th></tr></thead>
-      <tbody>
-      {% for s in sites %}
-        <tr>
-          <td><a href="/sites/{{ s.id }}">{{ s.url }}</a></td>
-          <td>{% if s.last_status %}<a href="/jobs/{{ s.last_job_id }}"><span class="pill {{ s.last_status }}">{{ STATUS_TITLES[s.last_status] }}</span></a>{% else %}<span class="muted">не было</span>{% endif %}</td>
-          <td class="num muted">{{ s.last_at|dt }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="card empty">Добавьте первый сайт — проверка займёт пару минут.</div>
-  {% endif %}
 </div>
 {% endblock %}

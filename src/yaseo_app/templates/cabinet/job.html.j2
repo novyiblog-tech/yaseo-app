@@ -32,6 +32,7 @@
         <h2 style="margin-bottom:6px">Оценка сайта из 100</h2>
         <p class="muted">Обошли {{ r.free.audit.pages_crawled }} стр., находок {{ r.free.audit.issues|length + (r.free.geo.issues or [])|length }}.
           <a href="/jobs/{{ job.id }}/report" target="_blank" rel="noopener">Открыть полный отчёт →</a></p>
+        <p style="margin-top:12px">{% if plan.pdf %}<a class="btn ghost" href="/jobs/{{ job.id }}/report.pdf">Скачать PDF</a>{% else %}<span class="muted small">PDF отчёта — в <a href="/billing">платных тарифах</a>.</span>{% endif %}</p>
       </div>
     </div>
     <div class="lights" style="margin-top:22px">
@@ -41,14 +42,35 @@
     </div>
   </section>
 
+  {% if diff %}
+  <section class="card">
+    <h2>С прошлой проверки <a class="muted small" href="/jobs/{{ diff.prev_id }}">№{{ diff.prev_id }}</a></h2>
+    <div class="diff-nums">
+      <div><b class="{{ 'up' if (diff.score_delta or 0) > 0 else ('down' if (diff.score_delta or 0) < 0 else '') }}">{% if diff.score_delta is none %}—{% elif diff.score_delta > 0 %}+{{ diff.score_delta }}{% else %}{{ diff.score_delta }}{% endif %}</b>оценка</div>
+      <div><b class="up">{{ diff.fixed_count }}</b>исправлено</div>
+      <div><b class="{{ 'down' if diff.new_count }}">{{ diff.new_count }}</b>появилось</div>
+      <div><b>{{ diff.kept_count }}</b>осталось</div>
+    </div>
+    {% if diff.fixed %}<h3 style="margin-top:18px">Исправлено</h3>
+    <ul class="plain">{% for g in diff.fixed %}<li><span class="dot green"></span>{{ g.title }}{% if g.pages > 1 %} <span class="muted">· {{ g.pages }} стр.</span>{% endif %}</li>{% endfor %}</ul>{% endif %}
+    {% if diff.new %}<h3 style="margin-top:18px">Появилось</h3>
+    <ul class="plain">{% for g in diff.new %}<li><span class="dot red"></span>{{ g.title }}{% if g.pages > 1 %} <span class="muted">· {{ g.pages }} стр.</span>{% endif %}</li>{% endfor %}</ul>{% endif %}
+    {% if diff.positions %}<h3 style="margin-top:18px">Позиции</h3>
+    <ul class="plain">{% for m in diff.positions %}<li><span class="{{ 'up' if m.delta > 0 else 'down' }}">{{ '▲' if m.delta > 0 else '▼' }}</span> {{ m.query }}: {{ m.before or 'вне топ-10' }} → {{ m.after or 'вне топ-10' }}</li>{% endfor %}</ul>{% endif %}
+  </section>
+  {% endif %}
+
   {% if a.steps %}
   <section class="card">
     <h2>Что сделать первым</h2>
     <ol class="steps">
-      {% for s in a.steps[:5] %}
+      {% for s in a.steps[:(steps_shown if steps_shown is not none else 7)] %}
       <li><b>{{ s.title }}</b><br><span class="muted small">{{ s.action }} · {{ s.who }} · {{ s.time }}</span></li>
       {% endfor %}
     </ol>
+    {% if steps_shown is not none and a.steps|length > steps_shown %}
+    <p class="note" style="margin-top:12px">Ещё {{ a.steps|length - steps_shown }} шагов открываются на <a href="/billing">платном тарифе</a>.</p>
+    {% endif %}
   </section>
   {% endif %}
 

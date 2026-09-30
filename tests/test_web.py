@@ -73,7 +73,7 @@ class WebTest(PgTestCase):
         self.client.post("/logout", data={"csrf": csrf(page)})
         self.assertEqual(self.client.get("/sites", follow_redirects=False).status_code, 303)
         r = self.client.post("/login", data={"email": "A@test.ru ", "password": PASSWORD})
-        self.assertIn("Сайты", r.text)
+        self.assertIn("Мои сайты", r.text)
 
     def test_wrong_password_and_lockout(self):
         self.signup()

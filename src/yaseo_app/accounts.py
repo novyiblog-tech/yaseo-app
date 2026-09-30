@@ -147,6 +147,12 @@ def add_site(conn: psycopg.Connection, user: dict, raw_url: str,
         net.check_url(url, allow_private=True if allow_private else None)
     except net.UnsafeURL:
         raise Refused("Этот адрес проверить нельзя: он ведёт во внутреннюю сеть.")
+    existing = conn.execute("SELECT * FROM sites WHERE user_id = %s AND url = %s",
+                            (user["id"], url)).fetchone()
+    if existing:
+        return existing
+    from yaseo_app import billing
+    billing.check_site_slot(conn, user)
     count = conn.execute("SELECT count(*) AS n FROM sites WHERE user_id = %s",
                          (user["id"],)).fetchone()["n"]
     if count >= MAX_SITES:
@@ -160,18 +166,56 @@ def add_site(conn: psycopg.Connection, user: dict, raw_url: str,
 
 
 def list_sites(conn: psycopg.Connection, user: dict) -> list[dict]:
-    return conn.execute(
+    """«Мои сайты»: последняя проверка, последняя оценка, изменение и ряд оценок."""
+    from yaseo_app import history
+    rows = conn.execute(
         """
-        SELECT s.*, j.id AS last_job_id, j.status AS last_status, j.finished_at AS last_at
+        SELECT s.*, j.id AS last_job_id, j.status AS last_status,
+               coalesce(j.finished_at, j.created_at) AS last_at,
+               d.scores, d.last_done_id, d.lights
         FROM sites s
         LEFT JOIN LATERAL (
-            SELECT id, status, finished_at FROM jobs WHERE site_id = s.id
+            SELECT id, status, finished_at, created_at FROM jobs WHERE site_id = s.id
             ORDER BY id DESC LIMIT 1
         ) j ON true
+        LEFT JOIN LATERAL (
+            SELECT array_agg(score ORDER BY id) AS scores, max(id) AS last_done_id,
+                   (array_agg(lights ORDER BY id DESC))[1] AS lights
+            FROM (SELECT id, score, lights FROM jobs
+                  WHERE site_id = s.id AND status = 'done' ORDER BY id DESC LIMIT 12) t
+        ) d ON true
         WHERE s.user_id = %s ORDER BY s.id
         """,
         (user["id"],),
     ).fetchall()
+    for r in rows:
+        scores = r["scores"] or []
+        r["score"] = scores[-1] if scores else None
+        known = [x for x in scores if x is not None]
+        r["delta"] = known[-1] - known[-2] if len(known) >= 2 else None
+        r["spark"] = history.sparkline(scores)
+    return rows
+
+
+def delete_site(conn: psycopg.Connection, user: dict, site_id: int) -> None:
+    """Сайт уходит из кабинета, проверки остаются в журнале расхода без привязки."""
+    with conn.transaction():
+        busy = conn.execute("SELECT 1 FROM jobs WHERE site_id = %s AND status IN"
+                            " ('queued', 'running')", (site_id,)).fetchone()
+        if busy:
+            raise Refused("Дождитесь конца проверки, потом удаляйте.")
+        conn.execute("UPDATE jobs SET site_id = NULL WHERE site_id = %s AND user_id = %s",
+                     (site_id, user["id"]))
+        conn.execute("DELETE FROM sites WHERE id = %s AND user_id = %s", (site_id, user["id"]))
+
+
+def previous_done(conn: psycopg.Connection, job: dict) -> dict | None:
+    """Прошлая готовая проверка того же сайта — для сравнения."""
+    if not job.get("site_id"):
+        return None
+    return conn.execute(
+        "SELECT * FROM jobs WHERE site_id = %s AND status = 'done' AND id < %s"
+        " ORDER BY id DESC LIMIT 1", (job["site_id"], job["id"])).fetchone()
 
 
 def get_site(conn: psycopg.Connection, user: dict, site_id: int) -> dict | None:
@@ -182,7 +226,8 @@ def get_site(conn: psycopg.Connection, user: dict, site_id: int) -> dict | None:
 
 def site_jobs(conn: psycopg.Connection, site_id: int, limit: int = 20) -> list[dict]:
     return conn.execute(
-        "SELECT id, status, attempts, error, created_at, finished_at, run_after,"
+        "SELECT id, status, attempts, error, created_at, finished_at, run_after, score,"
+        " jsonb_array_length(coalesce(result->'queries', '[]')) AS queries,"
         " (result->'spend'->>'cost_rub')::numeric AS cost_rub,"
         " result->>'sources_mode' AS sources_mode"
         " FROM jobs WHERE site_id = %s ORDER BY id DESC LIMIT %s",
@@ -205,9 +250,16 @@ def start_check(conn: psycopg.Connection, user: dict, site: dict, queries_text: 
         raise Refused("Проверка этого сайта уже идёт.")
     if active["total"] >= MAX_ACTIVE_JOBS:
         raise Refused(f"Одновременно идёт не больше {MAX_ACTIVE_JOBS} проверок.")
+    from yaseo_app import billing
+    allow = billing.audit_allowance(conn, user)
+    queries = parse_queries(queries_text)
+    if allow["queries"] is not None:
+        queries = queries[:allow["queries"]]
     params = {"url": site["url"], "max_pages": max(1, min(int(max_pages), MAX_PAGES)),
-              "queries": parse_queries(queries_text)}
-    return jobs.enqueue(conn, user["id"], "audit", params, site_id=site["id"])
+              "queries": queries, "limits": {"answers": allow["answers"]}}
+    job_id = jobs.enqueue(conn, user["id"], "audit", params, site_id=site["id"])
+    conn.execute("UPDATE jobs SET plan = %s WHERE id = %s", (allow["plan"], job_id))
+    return job_id
 
 
 def get_job(conn: psycopg.Connection, user: dict, job_id: int) -> dict | None:

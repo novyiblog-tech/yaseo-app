@@ -81,3 +81,42 @@ tr:last-child td { border-bottom: 0; }
   .hero { grid-template-columns: 1fr; gap: 12px; }
   .card { padding: 18px; }
 }
+
+/* мои сайты */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.tile { display: grid; gap: 14px; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); text-decoration: none; transition: border-color .15s; }
+.tile:hover { border-color: var(--ink-3); }
+.tile-top { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.tile-url { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-score { display: flex; align-items: baseline; gap: 12px; }
+.tile-lights { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--size-small); color: var(--ink-2); }
+.score-sm { font-family: var(--font-display); font-weight: 800; font-size: 52px; line-height: .9; letter-spacing: -0.05em; }
+.score-xs { font-weight: 800; }
+.score-sm.green, .score-xs.green { color: var(--accent); } .score-sm.yellow, .score-xs.yellow { color: var(--warn); }
+.score-sm.red, .score-xs.red { color: var(--bad); } .score-sm.grey, .score-xs.grey { color: var(--none); }
+.delta { font-weight: 800; font-size: var(--size-small); }
+.up { color: var(--accent); } .down { color: #ff8a8f; }
+.spark-wrap { margin-left: auto; color: var(--ink-3); }
+.spark { display: block; }
+
+/* сравнение */
+.diff-nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.diff-nums div { padding: 14px; background: var(--surface-2); border-radius: var(--radius); color: var(--ink-2); font-size: var(--size-small); }
+.diff-nums b { display: block; font-family: var(--font-display); font-size: 30px; line-height: 1.1; color: var(--ink); }
+.diff-nums b.up { color: var(--accent); } .diff-nums b.down { color: #ff8a8f; }
+.plain { list-style: none; padding: 0; display: grid; gap: 6px; margin-top: 8px; }
+
+/* тариф */
+.meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 20px; }
+.meter-head { display: flex; justify-content: space-between; font-size: var(--size-small); color: var(--ink-2); margin-bottom: 6px; }
+.bar-track { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.bar-track i { display: block; height: 100%; background: var(--accent); }
+.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.plan { display: grid; gap: 12px; align-content: start; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.plan.current { border-color: var(--accent); }
+.plan .price { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: -0.03em; }
+.plan .price span { font-size: var(--size-small); color: var(--ink-3); font-weight: 600; }
+.plan form { margin-top: auto; }
+.plan .btn { width: 100%; }
+@media (max-width: 720px) { .diff-nums { grid-template-columns: repeat(2, 1fr); } }
+.plan .pill { justify-self: start; }

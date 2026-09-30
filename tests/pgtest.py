@@ -31,6 +31,8 @@ class PgTestCase(unittest.TestCase):
 
     def setUp(self):
         self.conn.execute("TRUNCATE spend, cache, jobs, sites, users RESTART IDENTITY CASCADE")
+        self.conn.execute("DROP TABLE IF EXISTS fake_provider")
+        self.conn.execute("DELETE FROM plans")
         self.conn.execute("DELETE FROM sources")
         db.migrate(self.conn)  # вернуть источники к заводским настройкам
 

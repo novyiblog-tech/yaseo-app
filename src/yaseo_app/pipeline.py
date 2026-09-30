@@ -67,11 +67,18 @@ def _item(section: str, query: str, data: dict, domain: str) -> dict:
             "rivals": list(dict.fromkeys(rivals))[:3]}
 
 
-def _section(conn, meter, src, section, queries, domain, region) -> dict:
+def _section(conn, meter, src, section, queries, domain, region, limit=None) -> dict:
     if src is None:
         return {"status": "off", "reason": "источник не подключён", "items": []}
     if not queries:
         return {"status": "skipped", "reason": "нет запросов для проверки", "items": []}
+    note = None
+    if limit is not None and limit < len(queries):
+        if limit <= 0:
+            return {"status": "skipped", "reason": "не входит в тариф или лимит исчерпан",
+                    "items": []}
+        note = f"по тарифу проверено {limit} из {len(queries)} запросов"
+        queries = queries[:limit]
     items, errors, in_row = [], 0, 0
     for q in queries:
         try:
@@ -92,7 +99,9 @@ def _section(conn, meter, src, section, queries, domain, region) -> dict:
         in_row = 0
         items.append(_item(section, q, data, domain))
     status = "ok" if not errors else ("failed" if errors == len(items) else "partial")
-    return {"status": status, "items": items}
+    if note and status == "ok":
+        status = "partial"
+    return {"status": status, "items": items, **({"reason": note} if note else {})}
 
 
 def run_audit(conn: psycopg.Connection, job: dict, user: dict,
@@ -106,7 +115,9 @@ def run_audit(conn: psycopg.Connection, job: dict, user: dict,
     domain = sources.host(url)
     queries = clean_queries(p.get("queries"))
     region = int(p.get("region", RUSSIA))
-    paid = {section: _section(conn, meter, srcs.get(name), section, queries, domain, region)
+    limits = p.get("limits") or {}
+    paid = {section: _section(conn, meter, srcs.get(name), section, queries, domain, region,
+                              limits.get(section))
             for section, name in SECTIONS}
     return {"schema": SCHEMA, "url": url, "sources_mode": "fake" if fake else "live",
             "queries": queries, "region": region, "free": free, "paid": paid,

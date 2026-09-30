@@ -18,7 +18,7 @@ from pathlib import Path
 
 import psycopg
 
-from yaseo_app import db, free_audit, jobs, pipeline, sources
+from yaseo_app import db, free_audit, history, jobs, pipeline, sources
 
 log = logging.getLogger("yaseo_app.worker")
 
@@ -53,7 +53,12 @@ def run_once(conn: psycopg.Connection, worker_id: str, srcs: dict,
         log.warning("задача %s: %s → %s", job["id"], exc, status)
         return job
     try:
-        jobs.finish(conn, job, result)
+        summary = history.summarize(result)
+    except Exception as exc:  # оценка не должна терять готовый результат
+        log.warning("задача %s: оценка не посчиталась: %s", job["id"], exc)
+        summary = None
+    try:
+        jobs.finish(conn, job, result, summary)
     except jobs.LeaseLost as exc:
         log.warning("%s", exc)
     return job

@@ -120,3 +120,72 @@ CREATE TABLE IF NOT EXISTS login_attempts (
     ok    boolean NOT NULL
 );
 CREATE INDEX IF NOT EXISTS login_attempts_email_at ON login_attempts (email, at);
+
+-- Деньги (этап 4). Тарифы — данные: цифры правятся в админке без выкладки кода.
+-- Пустой лимит — без ограничения; 0 — недоступно в тарифе.
+CREATE TABLE IF NOT EXISTS plans (
+    code              text PRIMARY KEY,
+    title             text NOT NULL,
+    price_rub         numeric(12, 2) NOT NULL,
+    period            text NOT NULL CHECK (period IN ('free', 'once', 'month')),
+    public            boolean NOT NULL DEFAULT true,
+    sort              int NOT NULL DEFAULT 0,
+    sites             int,
+    audits_per_period int,
+    queries_per_audit int,
+    ai_checks         int,
+    tracked_queries   int,
+    free_every_days   int,
+    steps_shown       int,
+    pdf               boolean NOT NULL DEFAULT false,
+    white_label       boolean NOT NULL DEFAULT false
+);
+
+-- Версия 2 из PLAN.md §4 — гипотеза, не решение владельцев.
+INSERT INTO plans (code, title, price_rub, period, sort, sites, audits_per_period,
+                   queries_per_audit, ai_checks, tracked_queries, free_every_days,
+                   steps_shown, pdf, white_label) VALUES
+    ('free',   'Проверка',      0,     'free',  0, 1,  1,  5,  0,   0,    30, 3,    false, false),
+    ('once',   'Разовый аудит', 1990,  'once',  1, 1,  1,  30, 5,   0,    NULL, NULL, true,  false),
+    ('start',  'Старт',         1990,  'month', 2, 2,  2,  30, 10,  300,  NULL, NULL, true,  false),
+    ('pro',    'Про',           4990,  'month', 3, 5,  5,  30, 50,  1000, NULL, NULL, true,  true),
+    ('agency', 'Агентство',     12900, 'month', 4, 20, 20, 30, 200, 3000, NULL, NULL, true,  true)
+ON CONFLICT (code) DO NOTHING;
+
+-- Одна строка на пользователя: что у него сейчас. Нет строки — тариф free.
+-- Разовый аудит — период на 30 дней без продления.
+CREATE TABLE IF NOT EXISTS subscriptions (
+    user_id              bigint PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    plan                 text NOT NULL REFERENCES plans(code),
+    status               text NOT NULL CHECK (status IN ('active', 'past_due', 'canceled')),
+    period_start         timestamptz NOT NULL,
+    period_end           timestamptz NOT NULL,
+    auto_renew           boolean NOT NULL DEFAULT true,
+    payment_method       text,
+    renew_attempts       int NOT NULL DEFAULT 0,
+    updated_at           timestamptz NOT NULL DEFAULT now()
+);
+
+-- Платёж создаётся у нас до перехода к платёжному сервису; статус меняется только
+-- после проверки у самого сервиса, телу уведомления не верим.
+CREATE TABLE IF NOT EXISTS payments (
+    id               bigserial PRIMARY KEY,
+    user_id          bigint NOT NULL REFERENCES users(id),
+    plan             text NOT NULL REFERENCES plans(code),
+    amount_rub       numeric(12, 2) NOT NULL,
+    purpose          text NOT NULL CHECK (purpose IN ('purchase', 'renewal')),
+    status           text NOT NULL DEFAULT 'pending'
+                     CHECK (status IN ('pending', 'succeeded', 'canceled')),
+    provider         text NOT NULL,
+    provider_id      text UNIQUE,
+    idempotence_key  text NOT NULL UNIQUE,
+    error            text,
+    created_at       timestamptz NOT NULL DEFAULT now(),
+    paid_at          timestamptz
+);
+CREATE INDEX IF NOT EXISTS payments_user ON payments (user_id, id DESC);
+
+-- Итог проверки для истории и «Моих сайтов»: не разбирать JSON результата на каждый показ.
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS score int;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS lights jsonb;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS plan text;

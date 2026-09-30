@@ -16,7 +16,8 @@
   <a class="wordmark" href="/">ya<b>SEO</b></a>
   <nav>
     {% if user %}
-      <a href="/sites">Сайты</a>
+      <a href="/sites">Мои сайты</a>
+      <a href="/billing">Тариф</a>
       <span class="muted">{{ user.email }}</span>
       <form method="post" action="/logout">
         <input type="hidden" name="csrf" value="{{ user.csrf }}">

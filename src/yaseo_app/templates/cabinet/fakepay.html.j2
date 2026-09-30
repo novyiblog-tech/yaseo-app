@@ -1,0 +1,17 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}Тестовая оплата{% endblock %}
+{% block main %}
+<div class="auth card">
+  <div class="note fake">Это виртуальный платёжный сервис. На его месте будет страница ЮKassa или CloudPayments.</div>
+  <h1 style="margin-top:18px">{{ pay.amount_rub|rub }}</h1>
+  <p class="muted">yaSEO · тариф «{{ pay.title }}»</p>
+  {% if row.status == 'pending' %}
+  <form method="post" style="margin-top:22px;display:grid;gap:10px">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
+    <button class="btn" name="decision" value="pay" type="submit">Оплатить</button>
+    <button class="btn ghost" name="decision" value="pay-bad-card" type="submit">Оплатить картой, которая не спишется при продлении</button>
+    <button class="btn ghost" name="decision" value="decline" type="submit">Отказаться</button>
+  </form>
+  {% else %}<p style="margin-top:18px" class="muted">Платёж уже {{ 'оплачен' if row.status == 'succeeded' else 'отменён' }}.</p>{% endif %}
+</div>
+{% endblock %}

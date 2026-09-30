@@ -23,14 +23,15 @@
     <h2>История</h2>
     {% if jobs %}
     <table>
-      <thead><tr><th>№</th><th>Статус</th><th class="num">Запущена</th><th class="num">Готова</th><th class="num">Расход</th></tr></thead>
+      <thead><tr><th>№</th><th>Статус</th><th class="num">Оценка</th><th class="num">Запросов</th><th class="num">Запущена</th><th class="num">Расход</th></tr></thead>
       <tbody>
       {% for j in jobs %}
         <tr>
           <td><a href="/jobs/{{ j.id }}">{{ j.id }}</a></td>
           <td><span class="pill {{ j.status }}">{{ STATUS_TITLES[j.status] }}</span>{% if j.sources_mode == 'fake' %} <span class="pill">виртуальные данные</span>{% endif %}</td>
+          <td class="num"><span class="score-xs {{ color_of(j.score) }}">{{ j.score if j.score is not none else '—' }}</span></td>
+          <td class="num muted">{{ j.queries or '—' }}</td>
           <td class="num muted">{{ j.created_at|dt }}</td>
-          <td class="num muted">{{ j.finished_at|dt }}</td>
           <td class="num">{{ j.cost_rub|money }}</td>
         </tr>
       {% endfor %}
@@ -38,5 +39,9 @@
     </table>
     {% else %}<p class="muted">Проверок ещё не было.</p>{% endif %}
   </div>
+  <form method="post" action="/sites/{{ site.id }}/delete" onsubmit="return confirm('Удалить сайт из кабинета? Отчёты останутся недоступны.')">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
+    <button class="linkbtn small" type="submit">Удалить сайт из кабинета</button>
+  </form>
 </div>
 {% endblock %}
