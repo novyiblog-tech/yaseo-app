@@ -119,11 +119,10 @@ tr:last-child td { border-bottom: 0; }
 .bar-track i { display: block; height: 100%; background: var(--accent); }
 /* пять тарифов в ряд; где тесно — лента с прокруткой, чтобы не было рядов 3 + 2 */
 .plans { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-/* на узком экране следующая карточка выглядывает справа, над лентой — подсказка «листайте» */
+/* на узком экране над лентой — подсказка «листайте»: карточки прежней ширины, 230 px */
 .plans-hint { display: none; margin: -6px 0 12px; font-size: var(--size-small); color: var(--ink-2); }
 .plans-hint span { color: var(--accent); font-weight: 800; }
-@media (max-width: 1000px) { .plans { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(230px, 42%); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 12px; } .plan { scroll-snap-align: start; } .plans-hint { display: block; } }
-@media (max-width: 560px) { .plans { grid-auto-columns: 78%; } }
+@media (max-width: 1000px) { .plans { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 12px; } .plan { scroll-snap-align: start; } .plans-hint { display: block; } }
 .plan { display: flex; flex-direction: column; gap: 12px; padding: 22px; background: var(--glass), var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
 .plan.current { border-color: transparent; box-shadow: var(--glow); }
 .plan .price { font-family: var(--font-display); font-weight: 900; font-size: 26px; letter-spacing: -0.03em; }
