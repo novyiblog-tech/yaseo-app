@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Кабинет{% endblock %} — yaSEO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+{% block head %}{% endblock %}
+<style>
+{{ css|safe }}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="wordmark" href="/">ya<b>SEO</b></a>
+  <nav>
+    {% if user %}
+      <a href="/sites">Сайты</a>
+      <span class="muted">{{ user.email }}</span>
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf" value="{{ user.csrf }}">
+        <button class="linkbtn" type="submit">Выйти</button>
+      </form>
+    {% elif path != "/login" %}
+      <a href="/login">Войти</a>
+    {% endif %}
+  </nav>
+</header>
+<main class="wrap">
+{% block main %}{% endblock %}
+</main>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "cabinet", "runtimeExecutable": "scripts/dev.sh", "runtimeArgs": [], "port": 8000 }
+  ]
+}

@@ -1,0 +1,42 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}{{ site.url }}{% endblock %}
+{% block main %}
+<div class="stack">
+  <div>
+    <div class="crumbs"><a href="/sites">Сайты</a> /</div>
+    <h1 style="text-transform:none">{{ site.url }}</h1>
+  </div>
+  <form class="card" method="post" action="/sites/{{ site.id }}/run">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
+    <h2>Новая проверка</h2>
+    <div class="field"><label for="queries">Запросы, по которым вас ищут — по одному в строке, до 30</label>
+      <textarea id="queries" name="queries" placeholder="ремонт квартир в краснодаре&#10;дизайн интерьера">{{ queries or '' }}</textarea></div>
+    <p class="muted small" style="margin-top:8px">Без запросов проверим только техническую часть и готовность к нейросетям. С запросами — ещё спрос, позиции и ответы нейросети Яндекса.</p>
+    <div class="row" style="margin-top:16px">
+      <div class="field" style="margin-top:0;width:160px"><label for="max_pages">Страниц обойти</label>
+        <input id="max_pages" type="number" name="max_pages" value="20" min="1" max="50"></div>
+      <button class="btn" type="submit">Запустить проверку</button>
+    </div>
+    {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+  </form>
+  <div class="card table-scroll">
+    <h2>История</h2>
+    {% if jobs %}
+    <table>
+      <thead><tr><th>№</th><th>Статус</th><th class="num">Запущена</th><th class="num">Готова</th><th class="num">Расход</th></tr></thead>
+      <tbody>
+      {% for j in jobs %}
+        <tr>
+          <td><a href="/jobs/{{ j.id }}">{{ j.id }}</a></td>
+          <td><span class="pill {{ j.status }}">{{ STATUS_TITLES[j.status] }}</span>{% if j.sources_mode == 'fake' %} <span class="pill">виртуальные данные</span>{% endif %}</td>
+          <td class="num muted">{{ j.created_at|dt }}</td>
+          <td class="num muted">{{ j.finished_at|dt }}</td>
+          <td class="num">{{ j.cost_rub|money }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="muted">Проверок ещё не было.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

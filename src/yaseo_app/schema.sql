@@ -95,3 +95,28 @@ CREATE TABLE IF NOT EXISTS cache (
     expires_at timestamptz NOT NULL,
     PRIMARY KEY (source, key, fake)
 );
+
+-- Кабинет (этап 3). Пароль — scrypt, соль внутри строки. Согласие на обработку
+-- персональных данных (152-ФЗ) фиксируется временем.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_at timestamptz;
+
+-- В cookie уходит случайный токен, в базе лежит только его хэш: утечка таблицы
+-- не даёт войти ни в одну сессию.
+CREATE TABLE IF NOT EXISTS sessions (
+    token_hash text PRIMARY KEY,
+    user_id    bigint NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    csrf       text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    expires_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sessions_user ON sessions (user_id);
+
+-- Попытки входа: перебор пароля режется по адресу почты.
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id    bigserial PRIMARY KEY,
+    email text NOT NULL,
+    at    timestamptz NOT NULL DEFAULT now(),
+    ok    boolean NOT NULL
+);
+CREATE INDEX IF NOT EXISTS login_attempts_email_at ON login_attempts (email, at);

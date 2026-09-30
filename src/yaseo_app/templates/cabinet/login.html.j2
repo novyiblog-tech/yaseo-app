@@ -1,0 +1,16 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}Вход{% endblock %}
+{% block main %}
+<div class="auth card">
+  <h1>Вход</h1>
+  <p class="muted small">Нет кабинета? <a href="/signup">Зарегистрируйтесь</a> — первая проверка бесплатно.</p>
+  {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/login">
+    <div class="field"><label for="email">Почта</label>
+      <input id="email" type="email" name="email" value="{{ email or '' }}" autocomplete="email" required></div>
+    <div class="field"><label for="password">Пароль</label>
+      <input id="password" type="password" name="password" autocomplete="current-password" required></div>
+    <p style="margin-top:22px"><button class="btn" type="submit">Войти</button></p>
+  </form>
+</div>
+{% endblock %}

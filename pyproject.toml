@@ -7,9 +7,16 @@ dependencies = [
     "yaseo",
     "jinja2>=3.1",
     "psycopg[binary]>=3.2",
+    "fastapi>=0.142.1",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.32",
+    "psycopg-pool>=3.3.3",
 ]
 
 [dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+]
 finmodel = ["openpyxl>=3.1"]
 
 [tool.uv.sources]

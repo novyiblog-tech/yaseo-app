@@ -1,0 +1,84 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}Проверка {{ job.id }}{% endblock %}
+{% block head %}{% if job.status in ('queued', 'running') %}<meta http-equiv="refresh" content="3">{% endif %}{% endblock %}
+{% block main %}
+<div class="stack">
+  <div>
+    <div class="crumbs"><a href="/sites">Сайты</a> / <a href="/sites/{{ job.site_id }}">{{ job.params.url }}</a> /</div>
+    <h1>Проверка №{{ job.id }} <span class="pill {{ job.status }}" style="vertical-align:middle">{{ STATUS_TITLES[job.status] }}</span></h1>
+  </div>
+
+  {% if job.status in ('queued', 'running') %}
+  <div class="card">
+    <p>{% if job.status == 'queued' %}Проверка в очереди{% if job.error %} — {{ job.error }}{% endif %}.{% else %}Обходим сайт и собираем данные.{% endif %}
+      Страница обновится сама.</p>
+    <div class="progress" aria-hidden="true"><i></i></div>
+  </div>
+  {% elif job.status == 'failed' %}
+  <div class="card">
+    <p>Проверка не удалась: {{ job.error }}</p>
+    <p class="muted small" style="margin-top:8px">Проверьте, что сайт открывается, и запустите заново со страницы сайта.</p>
+  </div>
+  {% else %}
+  {% set r = job.result %}
+  {% if r.sources_mode == 'fake' %}
+  <div class="note fake">Данные о спросе, позициях и ответах нейросети — виртуальные: сервис работает в тестовом режиме, без обращений к Яндексу.</div>
+  {% endif %}
+
+  <section class="card">
+    <div class="hero">
+      <div class="score {{ color }}">{{ a.total if a.total is not none else '—' }}</div>
+      <div>
+        <h2 style="margin-bottom:6px">Оценка сайта из 100</h2>
+        <p class="muted">Обошли {{ r.free.audit.pages_crawled }} стр., находок {{ r.free.audit.issues|length + (r.free.geo.issues or [])|length }}.
+          <a href="/jobs/{{ job.id }}/report" target="_blank" rel="noopener">Открыть полный отчёт →</a></p>
+      </div>
+    </div>
+    <div class="lights" style="margin-top:22px">
+      {% for l in a.lights %}
+      <div class="light"><span class="dot {{ l.color }}"></span>{{ l.name }}<b>{{ l.score if l.score is not none else '—' }}</b>{% if l.note %}<span class="muted small">{{ l.note }}</span>{% endif %}</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if a.steps %}
+  <section class="card">
+    <h2>Что сделать первым</h2>
+    <ol class="steps">
+      {% for s in a.steps[:5] %}
+      <li><b>{{ s.title }}</b><br><span class="muted small">{{ s.action }} · {{ s.who }} · {{ s.time }}</span></li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+
+  {% for key in ('demand', 'positions', 'answers') %}
+  {% set sec = r.paid[key] %}
+  <section class="card table-scroll">
+    <h2>{{ SECTION_TITLES[key] }} <span class="pill {{ sec.status }}" style="vertical-align:middle">{{ SECTION_STATUS[sec.status] }}</span></h2>
+    {% if sec.reason %}<p class="muted small" style="margin-bottom:12px">{{ sec.reason }}</p>{% endif %}
+    {% if sec['items'] %}
+    <table>
+      {% if key == 'demand' %}
+      <thead><tr><th>Запрос</th><th class="num">Показов в месяц</th></tr></thead>
+      <tbody>{% for it in sec['items'] %}<tr><td>{{ it.query }}</td><td class="num">{{ it.error or it.freq|num }}</td></tr>{% endfor %}</tbody>
+      {% elif key == 'positions' %}
+      <thead><tr><th>Запрос</th><th class="num">Место</th><th>Первые в выдаче</th></tr></thead>
+      <tbody>{% for it in sec['items'] %}<tr><td>{{ it.query }}</td>
+        <td class="num">{% if it.error %}ошибка{% else %}{{ it.position or 'нет в топ-10' }}{% endif %}</td>
+        <td class="muted">{{ (it.top3 or [])|join(', ') }}</td></tr>{% endfor %}</tbody>
+      {% else %}
+      <thead><tr><th>Запрос</th><th>Цитирует вас</th><th>Кого вместо вас</th></tr></thead>
+      <tbody>{% for it in sec['items'] %}<tr><td>{{ it.query }}</td>
+        <td>{% if it.error %}ошибка{% elif it.cited %}да, источник №{{ it.cited_position }}{% else %}нет{% endif %}</td>
+        <td class="muted">{{ (it.rivals or [])|join(', ') }}</td></tr>{% endfor %}</tbody>
+      {% endif %}
+    </table>
+    {% elif not sec.reason %}<p class="muted">Нет данных.</p>{% endif %}
+  </section>
+  {% endfor %}
+
+  <p class="muted small">Расход на данные по этой проверке: {{ r.spend.cost_rub|money }}{% if r.spend.fake %} (виртуальный){% endif %}.</p>
+  {% endif %}
+</div>
+{% endblock %}

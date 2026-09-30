@@ -1,0 +1,34 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}Сайты{% endblock %}
+{% block main %}
+<div class="stack">
+  <h1>Сайты</h1>
+  <form class="card" method="post" action="/sites">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
+    <div class="row">
+      <div class="field grow" style="margin-top:0"><label for="url">Адрес сайта</label>
+        <input id="url" type="text" name="url" value="{{ url or '' }}" placeholder="example.ru" required></div>
+      <button class="btn" type="submit">Добавить</button>
+    </div>
+    {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+  </form>
+  {% if sites %}
+  <div class="card table-scroll">
+    <table>
+      <thead><tr><th>Сайт</th><th>Последняя проверка</th><th class="num">Когда</th></tr></thead>
+      <tbody>
+      {% for s in sites %}
+        <tr>
+          <td><a href="/sites/{{ s.id }}">{{ s.url }}</a></td>
+          <td>{% if s.last_status %}<a href="/jobs/{{ s.last_job_id }}"><span class="pill {{ s.last_status }}">{{ STATUS_TITLES[s.last_status] }}</span></a>{% else %}<span class="muted">не было</span>{% endif %}</td>
+          <td class="num muted">{{ s.last_at|dt }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card empty">Добавьте первый сайт — проверка займёт пару минут.</div>
+  {% endif %}
+</div>
+{% endblock %}

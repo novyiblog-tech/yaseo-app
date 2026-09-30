@@ -1,0 +1,18 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}Регистрация{% endblock %}
+{% block main %}
+<div class="auth card">
+  <h1>Регистрация</h1>
+  <p class="muted small">Уже есть кабинет? <a href="/login">Войдите</a>.</p>
+  {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/signup">
+    <div class="field"><label for="email">Почта</label>
+      <input id="email" type="email" name="email" value="{{ email or '' }}" autocomplete="email" required></div>
+    <div class="field"><label for="password">Пароль, не короче 10 знаков</label>
+      <input id="password" type="password" name="password" autocomplete="new-password" minlength="10" required></div>
+    <label class="check"><input type="checkbox" name="consent" value="yes" required>
+      <span>Даю согласие на обработку персональных данных — почты и адресов сайтов — для работы сервиса.</span></label>
+    <p style="margin-top:22px"><button class="btn" type="submit">Создать кабинет</button></p>
+  </form>
+</div>
+{% endblock %}
