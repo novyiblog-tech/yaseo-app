@@ -1,6 +1,9 @@
 """Постобработка рендера камня: свечение трещин и растворение краёв в фон страницы.
 
-    python3 scripts/rock-post.py RENDER.png OUT.webp hero|wide
+    python3 scripts/rock-post.py SRC OUT.webp hero|wide [--no-bloom] [--crop x0,y0,x1,y1]
+
+SRC — рендер Blender (scripts/render-rock.py) или готовая картинка из нейросети:
+у неё трещины уже светятся (--no-bloom), а знак генератора в углу срезается --crop.
 
 Нужен Pillow (системный python3). Фон страницы — #0a0a0a, края кадра уходят в него,
 чтобы картинка не читалась прямоугольником на тёмной теме.
@@ -11,14 +14,18 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 BG = (10, 10, 10)
 src, out, variant = sys.argv[1], sys.argv[2], sys.argv[3]
+opts = sys.argv[4:]
 im = Image.open(src).convert("RGB")
+if "--crop" in opts:
+    im = im.crop(tuple(int(v) for v in opts[opts.index("--crop") + 1].split(",")))
 w, h = im.size
 
 # bloom: берём только яркое (трещины и их отражения), размываем в двух радиусах и складываем
-bright = im.point(lambda v: 0 if v < 150 else int((v - 150) * 255 / 105))
-halo = ImageChops.add(bright.filter(ImageFilter.GaussianBlur(w * 0.006)),
-                      bright.filter(ImageFilter.GaussianBlur(w * 0.022)), scale=1.6)
-im = ImageChops.screen(im, halo)
+if "--no-bloom" not in opts:
+    bright = im.point(lambda v: 0 if v < 150 else int((v - 150) * 255 / 105))
+    halo = ImageChops.add(bright.filter(ImageFilter.GaussianBlur(w * 0.006)),
+                          bright.filter(ImageFilter.GaussianBlur(w * 0.022)), scale=1.6)
+    im = ImageChops.screen(im, halo)
 
 # маска краёв: мягкий овал; у героя сильнее гасим верх (там стоит карточка) и низ
 mask = Image.new("L", (w, h), 0)

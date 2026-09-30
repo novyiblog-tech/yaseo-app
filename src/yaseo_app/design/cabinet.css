@@ -153,9 +153,9 @@ tr:last-child td { border-bottom: 0; }
 .l-kick { display: flex; align-items: center; gap: 14px; font-size: var(--size-small); color: var(--ink-2); font-variant-numeric: tabular-nums; margin-bottom: 22px; }
 .l-kick::after { content: ""; width: 64px; height: 1px; background: currentColor; }
 .l-hero { position: relative; display: grid; grid-template-columns: 1.35fr 1fr; gap: 48px; align-items: center; padding-top: 16px; }
-/* сцена справа: камень с трещинами (scripts/render-rock.py), карточка стоит на нём */
-.l-stage { position: relative; isolation: isolate; padding-bottom: calc(94% - 40px); }
-/* верх груды — на трети высоты кадра: отступ снизу подобран так, чтобы карточка стояла на камне */
+/* сцена справа: камень с трещинами (Nano Banana Pro, доводка scripts/rock-post.py), карточка стоит на нём */
+.l-stage { position: relative; isolation: isolate; padding-bottom: calc(89% + 33px); }
+/* верх скалы — на 44% высоты кадра 728×1152: отступ снизу подобран так, чтобы карточка стояла на камне */
 .l-rock { position: absolute; z-index: -1; left: 50%; bottom: 0; width: calc(100% + 48px); height: auto; transform: translateX(-50%); pointer-events: none; user-select: none; }
 .l-title { font-size: clamp(38px, 5.4vw, 72px); line-height: 0.94; letter-spacing: -0.035em; }
 .l-lead { font-size: 19px; color: var(--ink); opacity: .82; margin-top: 26px; max-width: 44ch; }
@@ -203,7 +203,7 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 860px) {
   .landing { gap: 72px; }
   .l-hero, .l-split { grid-template-columns: 1fr; gap: 36px; }
-  .l-stage { padding-bottom: calc(94% - 60px); }
+  .l-stage { padding-bottom: calc(89% - 10px); }
   .l-rock { width: 100%; }
   .l-final-rock { margin-top: -4%; }
   .l-grid3 { grid-template-columns: 1fr; }
