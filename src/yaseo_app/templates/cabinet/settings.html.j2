@@ -1,14 +1,25 @@
 {% extends "cabinet/base.html.j2" %}
 {% block title %}Настройки{% endblock %}
 {% block main %}
+{% macro locked(code) %}<p class="muted small">С тарифа «{{ feature_plan[code] }}» · <a href="/billing">тарифы</a></p>{% endmacro %}
 <div class="stack">
   <h1>Настройки</h1>
+  {% if user.actor_id %}
+  <div class="note">Вы вошли как {{ user.actor_email }} в кабинет {{ user.email }}. Настройки кабинета, оплату и коллег меняет владелец.</div>
+  {% else %}
+
   <form class="card" method="post" action="/settings">
     <input type="hidden" name="csrf" value="{{ user.csrf }}">
     <h2>Письма</h2>
     <p class="muted small">Почта: {{ user.email }}</p>
+    {% if cur.plan.weekly_digest %}
     <label class="check"><input type="checkbox" name="weekly_digest" value="yes" {% if user.weekly_digest %}checked{% endif %}>
-      <span>Раз в неделю присылать, что изменилось: позиции, новые проверки, срок сертификата. Если ничего не изменилось — письма не будет.</span></label>
+      <span>Письмо недели: что изменилось — места, новые проверки, срок сертификата. Если ничего не изменилось — письма не будет.</span></label>
+    {% else %}<p class="check"><span>Письмо недели «что изменилось» — с тарифа «Старт» · <a href="/billing">тарифы</a></span></p>{% endif %}
+    {% if feats.alerts %}
+    <label class="check"><input type="checkbox" name="alerts" value="yes" {% if user.alerts %}checked{% endif %}>
+      <span>Срочные письма: сразу написать, если сайт перестал открываться, сертификат скоро истечёт или место в Яндексе резко упало.</span></label>
+    {% else %}<p class="check"><span>Срочные письма — с тарифа «{{ feature_plan.alerts }}» · <a href="/billing">тарифы</a></span></p>{% endif %}
     <p style="margin-top:18px"><button class="btn" type="submit">Сохранить</button></p>
   </form>
 
@@ -32,6 +43,63 @@
     {% endif %}
     {% if renew_error %}<div class="error" role="alert">{{ renew_error }}</div>{% endif %}
   </section>
+
+  <section class="card" id="brand">
+    <h2>Логотип и контакты в отчёте</h2>
+    {% if feats.brand %}
+    <p class="muted small">Отчёт и PDF — от имени вашей студии: ваш логотип и контакты вместо знака yaseo. Для отчётов своим клиентам.</p>
+    <form method="post" action="/settings/brand" enctype="multipart/form-data">
+      <input type="hidden" name="csrf" value="{{ user.csrf }}">
+      <div class="field"><label for="brand_name">Название</label>
+        <input id="brand_name" type="text" name="brand_name" maxlength="80" value="{{ user.brand_name or '' }}"></div>
+      <div class="field"><label for="brand_contacts">Контакты
+        <span class="hint">Телефон, почта, сайт — будут внизу отчёта.</span></label>
+        <textarea id="brand_contacts" name="brand_contacts" maxlength="300" style="min-height:70px">{{ user.brand_contacts or '' }}</textarea></div>
+      <div class="field"><label for="logo">Логотип
+        <span class="hint">PNG, JPEG или WebP до 300 КБ.{% if user.brand_logo %} Сейчас загружен.{% endif %}</span></label>
+        <input id="logo" type="file" name="logo" accept="image/png,image/jpeg,image/webp"></div>
+      {% if user.brand_logo %}<label class="check"><input type="checkbox" name="remove_logo" value="yes"><span>Убрать логотип</span></label>{% endif %}
+      <p style="margin-top:18px"><button class="btn ghost" type="submit">Сохранить</button></p>
+      {% if brand_error %}<div class="error" role="alert">{{ brand_error }}</div>{% endif %}
+    </form>
+    {% else %}<p class="muted small">Отчёт от имени своей студии для своих клиентов.</p>{{ locked('brand') }}{% endif %}
+  </section>
+
+  <section class="card" id="team">
+    <h2>Доступ коллегам</h2>
+    {% if feats.team %}
+    <p class="muted small">Второй и третий человек в этом кабинете: свой вход, общие сайты и проверки. Оплату и настройки меняете только вы.</p>
+    {% if members %}<ul class="plain" style="margin-top:12px">{% for m in members %}
+      <li class="row" style="justify-content:space-between;gap:10px">{{ m.email }} <span class="muted small">{{ 'в кабинете' if m.email_confirmed_at else 'ждём ответа на приглашение' }}</span>
+        <form method="post" action="/settings/team/{{ m.id }}/delete"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="linkbtn small" type="submit">убрать доступ</button></form></li>{% endfor %}</ul>{% endif %}
+    {% if members|length < max_members %}
+    <form method="post" action="/settings/team" style="margin-top:12px">
+      <input type="hidden" name="csrf" value="{{ user.csrf }}">
+      <div class="field"><label for="member">Почта коллеги</label>
+        <div class="row" style="display:flex;gap:10px;flex-wrap:wrap"><input id="member" type="email" name="email" style="flex:1 1 220px" value="{{ member_email or '' }}">
+        <button class="btn ghost" type="submit">Пригласить</button></div></div>
+    </form>{% endif %}
+    {% if team_error %}<div class="error" role="alert">{{ team_error }}</div>{% endif %}
+    {% else %}<p class="muted small">Второй и третий пользователь в том же кабинете.</p>{{ locked('team') }}{% endif %}
+  </section>
+
+  <section class="card" id="yandex">
+    <h2>Яндекс Вебмастер и Метрика</h2>
+    {% if not feats.webmaster %}<p class="muted small">Настоящие показы, клики и переходы из поиска прямо в кабинете.</p>{{ locked('webmaster') }}
+    {% elif not yandex_ready %}<p class="muted small">Подключение появится, когда сервис зарегистрирует приложение в Яндекс ID.</p>
+    {% elif yandex_link %}
+      <p class="muted small">Подключён Яндекс ID {{ yandex_link.login }}. Данные Вебмастера и Метрики берём при открытии страницы сайта и не храним.</p>
+      <form method="post" action="/settings/yandex/disconnect" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ user.csrf }}">
+        <button class="btn ghost" type="submit">Отключить</button></form>
+    {% else %}
+      <p class="muted small">Войдите Яндекс ID, на котором сайты подтверждены в Вебмастере и стоят счётчики Метрики. Доступ — только на чтение.</p>
+      <form method="post" action="/settings/yandex/connect" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ user.csrf }}">
+        <button class="btn ghost" type="submit">Подключить Яндекс</button></form>
+    {% endif %}
+    {% if yandex_error %}<div class="error" role="alert">{{ yandex_error }}</div>{% endif %}
+  </section>
+  <p class="muted small">Город, автопроверка, исключения, конкуренты и разделы — в настройках каждого сайта.</p>
+  {% endif %}
   {% if dev %}<p class="muted small">Машина разработчика: <a href="/dev/outbox">письма, которые ушли бы вам</a>.</p>{% endif %}
 </div>
 {% endblock %}

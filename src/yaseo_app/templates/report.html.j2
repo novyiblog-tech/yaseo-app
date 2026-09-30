@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>yaseo — проверка {{ host }}</title>
+<title>{{ brand.name if brand and brand.name else 'yaseo' }} — проверка {{ host }}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
 <style>
@@ -16,7 +16,11 @@
 
 <header class="head">
   <div>
+    {% if brand %}
+    <div class="brand">{% if brand.logo %}<img class="brand-logo" src="{{ brand.logo }}" alt="{{ brand.name or '' }}">{% endif %}{% if brand.name %}<span class="brand-name">{{ brand.name }}</span>{% endif %}</div>
+    {% else %}
     <div class="wordmark" aria-label="yaseo"><span class="ya">ya</span>seo</div>
+    {% endif %}
     <h1 style="margin-top:18px">Проверка сайта <span class="u">{{ host }}</span></h1>
     <p class="muted" style="margin-top:6px">{{ kind }}</p>
   </div>
@@ -154,7 +158,7 @@
 </section>
 
 <footer class="foot">
-  <span>yaseo · движок {{ engine }}</span>
+  {% if brand %}<span class="brand-contacts">{{ brand.name or '' }}{% if brand.contacts %}{% if brand.name %} · {% endif %}{{ brand.contacts }}{% endif %}</span>{% else %}<span>yaseo · движок {{ engine }}</span>{% endif %}
   <span>{{ collected_at }}</span>
 </footer>
 

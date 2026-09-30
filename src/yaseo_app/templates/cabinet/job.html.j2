@@ -44,6 +44,16 @@
         <p style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
           <a class="btn" href="/jobs/{{ job.id }}/report">Открыть полный отчёт</a>
           {% if plan.pdf %}<a class="btn ghost" href="/jobs/{{ job.id }}/report.pdf">Скачать PDF</a>{% else %}<span class="muted">PDF отчёта — в <a href="/billing">платных тарифах</a>.</span>{% endif %}</p>
+        {% if feats.share %}
+        <form class="share" method="post" action="/jobs/{{ job.id }}/{{ 'unshare' if job.share_token else 'share' }}">
+          <input type="hidden" name="csrf" value="{{ user.csrf }}">
+          {% if job.share_token %}
+          <label class="small muted" for="share-link">Ссылка на отчёт без входа — для клиента или коллеги</label>
+          <div class="row"><input id="share-link" type="text" readonly value="{{ base_url }}/r/{{ job.share_token }}">
+          <button class="btn ghost" type="submit">Отключить ссылку</button></div>
+          {% else %}<button class="linkbtn small" type="submit">Сделать ссылку на отчёт без входа</button>{% endif %}
+        </form>
+        {% endif %}
       </div>
     </div>
     <div class="lights" style="margin-top:22px">
@@ -115,20 +125,24 @@
     <h2>{{ SECTION_TITLES[key] }} <span class="pill {{ sec.status }}" style="vertical-align:middle">{{ SECTION_STATUS[sec.status] }}</span></h2>
     <p class="muted small" style="margin:-6px 0 12px">{{ SECTION_HINTS[key] }}</p>
     {% if sec.reason %}<p class="muted small" style="margin-bottom:12px">{{ sec.reason }}</p>{% endif %}
+    {% set watched = r.rivals or [] %}
+    {% if key == 'positions' and r.region and r.region != 225 %}<p class="muted small" style="margin-bottom:12px">Выдача: {{ region_name(r.region) }}.</p>{% endif %}
     {% if sec['items'] %}
     <table>
       {% if key == 'demand' %}
       <thead><tr><th>Фраза</th><th class="num">Ищут раз в месяц</th></tr></thead>
       <tbody>{% for it in sec['items'] %}<tr><td>{{ it.query }}</td><td class="num">{{ it.error or it.freq|num }}</td></tr>{% endfor %}</tbody>
       {% elif key == 'positions' %}
-      <thead><tr><th>Фраза</th><th class="num">Ваше место</th><th>Кто на первых местах</th></tr></thead>
+      <thead><tr><th>Фраза</th><th class="num">Ваше место</th>{% for w in watched %}<th class="num">{{ w }}</th>{% endfor %}<th>Кто на первых местах</th></tr></thead>
       <tbody>{% for it in sec['items'] %}<tr><td>{{ it.query }}</td>
         <td class="num">{% if it.error %}ошибка{% else %}{{ it.position or 'нет в топ-10' }}{% endif %}</td>
+        {% for w in watched %}<td class="num muted">{{ (it.watched or {}).get(w) or '—' }}</td>{% endfor %}
         <td class="muted">{{ (it.top3 or [])|join(', ') }}</td></tr>{% endfor %}</tbody>
       {% else %}
-      <thead><tr><th>Фраза</th><th>Называет вас</th><th>Кого называет вместо вас</th></tr></thead>
+      <thead><tr><th>Фраза</th><th>Называет вас</th>{% for w in watched %}<th>{{ w }}</th>{% endfor %}<th>Кого называет вместо вас</th></tr></thead>
       <tbody>{% for it in sec['items'] %}<tr><td>{{ it.query }}</td>
         <td>{% if it.error %}ошибка{% elif it.cited %}да, источник №{{ it.cited_position }}{% else %}нет{% endif %}</td>
+        {% for w in watched %}<td class="muted">{% if (it.watched or {}).get(w) %}да{% elif it.watched %}нет{% else %}—{% endif %}</td>{% endfor %}
         <td class="muted">{{ (it.rivals or [])|join(', ') }}</td></tr>{% endfor %}</tbody>
       {% endif %}
     </table>

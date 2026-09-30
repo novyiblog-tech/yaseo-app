@@ -5,7 +5,9 @@
 
 - с 03:00 по Москве — съём позиций на сегодня (ночью отложенные запросы дешевле);
 - понедельник с 09:00 — письма «что изменилось»;
-- каждый проход — отправка писем из очереди и продление подписок.
+- с 06:00 — автопроверки сайтов по расписанию;
+- раз в час — открывается ли сайт и что с сертификатом (для срочных писем);
+- каждый проход — отправка писем из очереди, напоминания о конце срока и продление.
 
     python -m yaseo_app.scheduler          # цикл раз в минуту
     python -m yaseo_app.scheduler --once
@@ -19,7 +21,7 @@ from datetime import datetime
 
 import psycopg
 
-from yaseo_app import billing, db, digest, mailer, monitor
+from yaseo_app import billing, db, digest, mailer, monitor, watch
 
 log = logging.getLogger("yaseo_app.scheduler")
 
@@ -38,6 +40,9 @@ def tick(conn: psycopg.Connection, now: datetime | None = None) -> dict:
         out["positions"] = monitor.schedule_daily(conn, now.date())
     if now.weekday() == DIGEST_WEEKDAY and now.hour >= DIGEST_HOUR:
         out["digests"] = digest.queue_weekly(conn, now.date())
+    if now.hour >= watch.AUTO_HOUR:
+        out["autochecks"] = watch.queue_autochecks(conn, now.date())
+    out["health"] = watch.queue_health(conn, now)
     out["mail"] = mailer.send_pending(conn)
     out["billing"] = billing.renew_due(conn, billing.provider(conn))
     return out
@@ -54,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
     while True:
         try:
             out = tick(conn)
-            if any(v for k, v in out.items() if k in ("positions", "digests")) \
+            if any(v for k, v in out.items() if k in ("positions", "digests", "autochecks")) \
                     or out["mail"]["sent"] or out["billing"]["renewed"]:
                 log.info("%s", out)
         except Exception:  # планировщик не падает от одной ошибки

@@ -37,6 +37,10 @@ p { margin: 0; max-width: var(--measure); }
 .back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; padding: 9px 16px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--surface); font-size: var(--size-small); font-weight: 700; text-decoration: none; }
 .back:hover { border-color: var(--ink); }
 .head .meta { text-align: right; }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand-logo { max-height: 56px; max-width: 220px; object-fit: contain; }
+.brand-name { font-family: var(--font-display); font-weight: 900; font-size: 24px; letter-spacing: -0.03em; }
+.brand-contacts { white-space: pre-line; }
 
 /* оценка */
 .verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; padding: 40px 0; border-bottom: 1px solid var(--line); align-items: center; }

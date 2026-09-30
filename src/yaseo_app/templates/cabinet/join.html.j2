@@ -1,0 +1,17 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}Вход в кабинет{% endblock %}
+{% block main %}
+<div class="auth card">
+  <h1>Приглашение</h1>
+  <p class="muted small">Задайте пароль для {{ email }} — и вы в кабинете.</p>
+  {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/team/join">
+    <input type="hidden" name="t" value="{{ token }}">
+    <div class="field"><label for="password">Пароль, не короче 10 знаков</label>
+      <input id="password" type="password" name="password" autocomplete="new-password" minlength="10" required></div>
+    <label class="check"><input type="checkbox" name="consent" value="yes" required>
+      <span>Даю согласие на обработку персональных данных — почты — для работы сервиса по <a href="/legal/privacy" target="_blank" rel="noopener">политике</a>.</span></label>
+    <p style="margin-top:22px"><button class="btn" type="submit">Войти в кабинет</button></p>
+  </form>
+</div>
+{% endblock %}

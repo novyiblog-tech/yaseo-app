@@ -128,6 +128,22 @@ def usage(conn: psycopg.Connection, user: dict, cur: dict | None = None) -> dict
     return dict(row)
 
 
+def feature_list(conn: psycopg.Connection) -> list[dict]:
+    """Настройки кабинета и с какого тарифа каждая (plans.sort — порядок тарифов)."""
+    return conn.execute("SELECT f.*, p.title AS plan_title, p.sort FROM features f"
+                        " JOIN plans p ON p.code = f.from_plan ORDER BY p.sort, f.code").fetchall()
+
+
+def features(conn: psycopg.Connection, user: dict, cur: dict | None = None) -> dict[str, bool]:
+    """Какие настройки доступны кабинету на его тарифе сейчас."""
+    cur = cur or current(conn, user)
+    return {f["code"]: cur["plan"]["sort"] >= f["sort"] for f in feature_list(conn)}
+
+
+def has(conn: psycopg.Connection, user: dict, code: str) -> bool:
+    return features(conn, user).get(code, False)
+
+
 def _left(limit, used) -> int | None:
     return None if limit is None else max(0, limit - used)
 

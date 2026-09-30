@@ -103,6 +103,10 @@ def login(conn: psycopg.Connection, email: str, password: str) -> dict:
     conn.execute("INSERT INTO login_attempts (email, ok) VALUES (%s, %s)", (email, ok))
     if not ok:
         raise Refused("Неверная почта или пароль.")
+    if user["owner_id"]:
+        from yaseo_app import team
+        if team.as_account(conn, user) is None:
+            raise Refused("Доступ коллег к этому кабинету выключен: тариф владельца ниже «Ультра».")
     return user
 
 
@@ -117,14 +121,19 @@ def open_session(conn: psycopg.Connection, user_id: int) -> str:
 
 
 def session_user(conn: psycopg.Connection, token: str | None) -> dict | None:
-    """Пользователь сессии с полем csrf, или None."""
+    """Пользователь сессии с полем csrf, или None. У коллеги — кабинет владельца
+    с полями actor_id и actor_email (team.as_account)."""
     if not token:
         return None
-    return conn.execute(
+    row = conn.execute(
         "SELECT u.*, s.csrf FROM sessions s JOIN users u ON u.id = s.user_id"
         " WHERE s.token_hash = %s AND s.expires_at > now()",
         (_token_hash(token),),
     ).fetchone()
+    if row and row["owner_id"]:
+        from yaseo_app import team
+        return team.as_account(conn, row)
+    return row
 
 
 def close_session(conn: psycopg.Connection, token: str | None) -> None:
@@ -215,8 +224,8 @@ def list_sites(conn: psycopg.Connection, user: dict) -> list[dict]:
 def delete_site(conn: psycopg.Connection, user: dict, site_id: int) -> None:
     """Сайт уходит из кабинета, проверки остаются в журнале расхода без привязки."""
     with conn.transaction():
-        busy = conn.execute("SELECT 1 FROM jobs WHERE site_id = %s AND status IN"
-                            " ('queued', 'running')", (site_id,)).fetchone()
+        busy = conn.execute("SELECT 1 FROM jobs WHERE site_id = %s AND kind = 'audit'"
+                            " AND status IN ('queued', 'running')", (site_id,)).fetchone()
         if busy:
             raise Refused("Дождитесь конца проверки, потом удаляйте.")
         conn.execute("UPDATE jobs SET site_id = NULL WHERE site_id = %s AND user_id = %s",
@@ -255,7 +264,9 @@ def parse_queries(text: str) -> list[str]:
 
 
 def start_check(conn: psycopg.Connection, user: dict, site: dict, queries_text: str = "",
-                max_pages: int = MAX_PAGES) -> int:
+                max_pages: int = MAX_PAGES, auto: bool = False) -> int:
+    """Поставить проверку. auto — автопроверка по расписанию: фразы прошлой проверки,
+    результат — письмом."""
     active = conn.execute(
         "SELECT count(*) FILTER (WHERE site_id = %s) AS here, count(*) AS total FROM jobs"
         " WHERE user_id = %s AND kind = 'audit' AND status IN ('queued', 'running')",
@@ -265,17 +276,28 @@ def start_check(conn: psycopg.Connection, user: dict, site: dict, queries_text: 
         raise Refused("Проверка этого сайта уже идёт.")
     if active["total"] >= MAX_ACTIVE_JOBS:
         raise Refused(f"Одновременно идёт не больше {MAX_ACTIVE_JOBS} проверок.")
-    from yaseo_app import billing, verify
+    from psycopg.types.json import Jsonb
+
+    from yaseo_app import billing, prefs, verify
     verify.require_confirmed(user)
     allow = billing.audit_allowance(conn, user, site["url"])
     queries = parse_queries(queries_text)
     if allow["queries"] is not None:
         queries = queries[:allow["queries"]]
     cap = min(allow["max_pages"] or MAX_PAGES, MAX_PAGES)
+    eff = prefs.effective(conn, user, site)
     params = {"url": site["url"], "max_pages": max(1, min(int(max_pages), cap)),
-              "queries": queries, "limits": {"answers": allow["answers"]}}
+              "queries": queries, "limits": {"answers": allow["answers"]},
+              "region": eff["region"], "exclude": eff["exclude"], "gentle": eff["gentle"],
+              "off": eff["off"], "rivals": eff["rivals"]}
+    if auto:
+        params["auto"] = True
     job_id = jobs.enqueue(conn, user["id"], "audit", params, site_id=site["id"])
     conn.execute("UPDATE jobs SET plan = %s WHERE id = %s", (allow["plan"], job_id))
+    if not auto:
+        # Автопроверка берёт фразы последней ручной проверки.
+        conn.execute("UPDATE sites SET schedule_queries = %s WHERE id = %s",
+                     (Jsonb(queries), site["id"]))
     return job_id
 
 

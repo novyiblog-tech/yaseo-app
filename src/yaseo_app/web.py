@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Request
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from psycopg.rows import dict_row
@@ -24,7 +24,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import subprocess
 import tempfile
 
-from yaseo_app import accounts, billing, db, legal, history, mailer, monitor, report, score, verify
+from yaseo_app import accounts, billing, db, legal, history, mailer, monitor, prefs, report, score
+from yaseo_app import team, verify, yandex
 from yaseo_app import promo as promos
 from yaseo_app.accounts import Refused
 
@@ -85,6 +86,7 @@ def _templates() -> Environment:
     env.filters["num"] = lambda v: f"{v:,}".replace(",", "\u00a0") if isinstance(v, int) else v
     env.filters["dt"] = lambda d: d.astimezone().strftime("%d.%m.%Y %H:%M") if d else "—"
     env.globals["color_of"] = score.color_of
+    env.globals["region_name"] = prefs.region_name
     env.filters["plural"] = report.plural
     env.globals.update(STATUS_TITLES=STATUS_TITLES, SECTION_TITLES=SECTION_TITLES,
                        SECTION_HINTS=SECTION_HINTS,
@@ -105,7 +107,7 @@ def _eta_seconds(job: dict) -> float:
 def _progress(c, job: dict) -> dict:
     if job["status"] == "queued":
         ahead = c.execute("SELECT count(*) AS n FROM jobs WHERE status IN ('queued', 'running')"
-                          " AND id < %s", (job["id"],)).fetchone()["n"]
+                          " AND kind = 'audit' AND id < %s", (job["id"],)).fetchone()["n"]
         return {"queued": True, "ahead": ahead}
     row = c.execute("SELECT extract(epoch FROM now() - started_at) AS el FROM jobs WHERE id = %s",
                     (job["id"],)).fetchone()
@@ -173,6 +175,15 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
     def check_csrf(user: dict, token: str) -> None:
         if not token or token != user["csrf"]:
             raise HTTPException(status_code=403, detail="Форма устарела, обновите страницу.")
+
+    def owner_only(user: dict) -> None:
+        """Оплата, настройки кабинета и коллеги — только у владельца, не у коллеги."""
+        if user.get("actor_id"):
+            raise HTTPException(status_code=403, detail="Это меняет только владелец кабинета.")
+
+    def feature_ctx(c, user) -> dict:
+        return {"feats": billing.features(c, user),
+                "feature_plan": {f["code"]: f["plan_title"] for f in billing.feature_list(c)}}
 
     def signed_in(token: str) -> RedirectResponse:
         resp = RedirectResponse("/sites", status_code=303)
@@ -358,7 +369,36 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         return page(request, "cabinet/site.html.j2", user, site=site, status=status,
                     jobs=accounts.site_jobs(c, site["id"]),
                     positions=monitor.site_table(c, site["id"], monitor.msk_today(c)),
-                    quota=monitor.quota(c, user), plan=billing.current(c, user)["plan"], **extra)
+                    quota=monitor.quota(c, user), plan=billing.current(c, user)["plan"],
+                    eff=prefs.effective(c, user, site), regions=prefs.REGIONS,
+                    schedules=prefs.SCHEDULES, yandex_link=yandex.link(c, user),
+                    yandex_ready=yandex.configured(),
+                    **feature_ctx(c, user), **extra)
+
+    @app.post("/sites/{site_id}/settings")
+    async def site_settings(request: Request, site_id: int, user=Depends(current),
+                            c=Depends(conn)):
+        form = dict(await request.form())
+        check_csrf(user, form.get("csrf", ""))
+        site = own_site(c, user, site_id)
+        try:
+            prefs.save_site(c, user, site, form)
+        except Refused as exc:
+            return site_view(request, c, user, site, status=400, prefs_error=str(exc),
+                             exclude_text=form.get("exclude", ""),
+                             rivals_text=form.get("rivals", ""))
+        return RedirectResponse(f"/sites/{site_id}#settings", status_code=303)
+
+    @app.get("/sites/{site_id}/yandex")
+    def site_yandex(request: Request, site_id: int, user=Depends(current), c=Depends(conn)):
+        site = own_site(c, user, site_id)
+        if not billing.has(c, user, "webmaster") or yandex.link(c, user) is None:
+            return RedirectResponse("/settings#yandex", status_code=303)
+        try:
+            data = yandex.site_data(c, user, site["url"])
+        except yandex.YandexError as exc:
+            data = {"error": str(exc)}
+        return page(request, "cabinet/yandex.html.j2", user, site=site, data=data)
 
     @app.post("/sites/{site_id}/track")
     def track(request: Request, site_id: int, queries: str = Form(""), csrf: str = Form(""),
@@ -382,29 +422,131 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
 
     def settings_page(request, c, user, status=200, **extra):
         return page(request, "cabinet/settings.html.j2", user, status=status, dev=allow_private,
-                    cur=billing.current(c, user), **extra)
+                    cur=billing.current(c, user), members=team.members(c, user),
+                    max_members=team.MAX_MEMBERS, yandex_ready=yandex.configured(),
+                    yandex_link=yandex.link(c, user), **feature_ctx(c, user), **extra)
 
     @app.get("/settings")
     def settings(request: Request, user=Depends(current), c=Depends(conn)):
         return settings_page(request, c, user)
 
+    @app.post("/settings")
+    def settings_save(weekly_digest: str = Form(""), alerts: str = Form(""),
+                      csrf: str = Form(""), user=Depends(current), c=Depends(conn)):
+        check_csrf(user, csrf)
+        owner_only(user)
+        # Галочки недоступного по тарифу на странице нет — его значение не трогаем.
+        if billing.current(c, user)["plan"]["weekly_digest"]:
+            c.execute("UPDATE users SET weekly_digest = %s WHERE id = %s",
+                      (weekly_digest == "yes", user["id"]))
+        if billing.has(c, user, "alerts"):
+            c.execute("UPDATE users SET alerts = %s WHERE id = %s", (alerts == "yes", user["id"]))
+        return RedirectResponse("/settings", status_code=303)
+
     @app.post("/settings/renew")
     def settings_renew(request: Request, on: str = Form(""), consent: str = Form(""),
                        csrf: str = Form(""), user=Depends(current), c=Depends(conn)):
         check_csrf(user, csrf)
+        owner_only(user)
         try:
             billing.set_auto_renew(c, user, on == "yes", consent=consent == "yes")
         except Refused as exc:
             return settings_page(request, c, user, status=400, renew_error=str(exc))
         return RedirectResponse("/settings#renew", status_code=303)
 
-    @app.post("/settings")
-    def settings_save(weekly_digest: str = Form(""), csrf: str = Form(""),
+    @app.post("/settings/brand")
+    async def settings_brand(request: Request, brand_name: str = Form(""),
+                             brand_contacts: str = Form(""), remove_logo: str = Form(""),
+                             logo: UploadFile | None = File(None), csrf: str = Form(""),
+                             user=Depends(current), c=Depends(conn)):
+        check_csrf(user, csrf)
+        owner_only(user)
+        data = await logo.read(prefs.MAX_LOGO + 1) if logo is not None else b""
+        try:
+            prefs.save_brand(c, user, brand_name, brand_contacts, data or None,
+                             remove_logo == "yes")
+        except Refused as exc:
+            return settings_page(request, c, user, status=400, brand_error=str(exc))
+        return RedirectResponse("/settings#brand", status_code=303)
+
+    @app.post("/settings/team")
+    def settings_team(request: Request, email: str = Form(""), csrf: str = Form(""),
                       user=Depends(current), c=Depends(conn)):
         check_csrf(user, csrf)
-        c.execute("UPDATE users SET weekly_digest = %s WHERE id = %s",
-                  (weekly_digest == "yes", user["id"]))
-        return RedirectResponse("/settings", status_code=303)
+        owner_only(user)
+        try:
+            team.invite(c, user, email)
+        except Refused as exc:
+            return settings_page(request, c, user, status=400, team_error=str(exc),
+                                 member_email=email)
+        return RedirectResponse("/settings#team", status_code=303)
+
+    @app.post("/settings/team/{member_id}/delete")
+    def settings_team_remove(member_id: int, csrf: str = Form(""), user=Depends(current),
+                             c=Depends(conn)):
+        check_csrf(user, csrf)
+        owner_only(user)
+        team.remove(c, user, member_id)
+        return RedirectResponse("/settings#team", status_code=303)
+
+    def yandex_return(request: Request) -> str:
+        return str(request.base_url).rstrip("/") + "/settings/yandex/callback"
+
+    @app.post("/settings/yandex/connect")
+    def yandex_connect(request: Request, csrf: str = Form(""), user=Depends(current),
+                       c=Depends(conn)):
+        check_csrf(user, csrf)
+        owner_only(user)
+        if not billing.has(c, user, "webmaster") or not yandex.configured():
+            raise HTTPException(status_code=404)
+        # state — csrf сессии: ответ Яндекса примем только в той же сессии.
+        return RedirectResponse(yandex.authorize_url(user["csrf"], yandex_return(request)),
+                                status_code=303)
+
+    @app.get("/settings/yandex/callback")
+    def yandex_callback(request: Request, code: str = "", state: str = "", error: str = "",
+                        user=Depends(current), c=Depends(conn)):
+        owner_only(user)
+        if not state or state != user["csrf"]:
+            raise HTTPException(status_code=403, detail="Ответ Яндекса не из этой сессии.")
+        if error or not code:
+            return settings_page(request, c, user, status=400,
+                                 yandex_error="Яндекс не дал доступ. Попробуйте ещё раз.")
+        try:
+            yandex.connect(c, user, code)
+        except yandex.YandexError as exc:
+            return settings_page(request, c, user, status=400,
+                                 yandex_error=f"Яндекс ответил ошибкой: {exc}")
+        return RedirectResponse("/settings#yandex", status_code=303)
+
+    @app.post("/settings/yandex/disconnect")
+    def yandex_disconnect(csrf: str = Form(""), user=Depends(current), c=Depends(conn)):
+        check_csrf(user, csrf)
+        owner_only(user)
+        yandex.disconnect(c, user)
+        return RedirectResponse("/settings#yandex", status_code=303)
+
+    @app.get("/team/join")
+    def team_join_form(request: Request, t: str = "", c=Depends(conn)):
+        member = team.pending(c, t)
+        if member is None:
+            return page(request, "cabinet/notice.html.j2", status=400, title="Ссылка устарела",
+                        text="Приглашение уже использовано или прошло 7 дней. Попросите "
+                             "владельца кабинета пригласить вас ещё раз.")
+        return page(request, "cabinet/join.html.j2", token=t, email=member["email"])
+
+    @app.post("/team/join")
+    def team_join(request: Request, t: str = Form(""), password: str = Form(""),
+                  consent: str = Form(""), c=Depends(conn)):
+        member = team.pending(c, t)
+        try:
+            if consent != "yes":
+                raise Refused("Без согласия на обработку персональных данных войти нельзя.")
+            joined = team.join(c, t, password)
+        except Refused as exc:
+            return page(request, "cabinet/join.html.j2", status=400, token=t, error=str(exc),
+                        email=member["email"] if member else "")
+        return signed_in(accounts.open_session(c, joined["id"]))
 
     @app.get("/unsubscribe")
     def unsubscribe(request: Request, u: int = 0, t: str = "", c=Depends(conn)):
@@ -478,7 +620,33 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         progress = _progress(c, job) if job["status"] in ("queued", "running") else None
         return page(request, "cabinet/job.html.j2", user, job=job, a=assessment, diff=diff,
                     steps_shown=shown, plan=cur["plan"], progress=progress,
-                    color=score.color_of(assessment.total) if assessment else None)
+                    color=score.color_of(assessment.total) if assessment else None,
+                    base_url=str(request.base_url).rstrip("/"), **feature_ctx(c, user))
+
+    @app.post("/jobs/{job_id}/share")
+    def job_share(job_id: int, csrf: str = Form(""), user=Depends(current), c=Depends(conn)):
+        check_csrf(user, csrf)
+        job = own_job(c, user, job_id)
+        try:
+            prefs.share(c, user, job)
+        except Refused as exc:
+            raise HTTPException(status_code=403, detail=str(exc))
+        return RedirectResponse(f"/jobs/{job_id}", status_code=303)
+
+    @app.post("/jobs/{job_id}/unshare")
+    def job_unshare(job_id: int, csrf: str = Form(""), user=Depends(current), c=Depends(conn)):
+        check_csrf(user, csrf)
+        prefs.unshare(c, user, own_job(c, user, job_id))
+        return RedirectResponse(f"/jobs/{job_id}", status_code=303)
+
+    @app.get("/r/{token}")
+    def shared_report(token: str, c=Depends(conn)):
+        """Отчёт по ссылке без входа: для клиента или коллеги владельца."""
+        got = prefs.shared(c, token)
+        if got is None:
+            raise HTTPException(status_code=404)
+        job, owner = got
+        return HTMLResponse(_report_html(c, owner, job, back=False))
 
     @app.get("/jobs/{job_id}/report")
     def job_report(job_id: int, user=Depends(current), c=Depends(conn)):
@@ -487,14 +655,15 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
             raise HTTPException(status_code=404)
         return HTMLResponse(_report_html(c, user, job))
 
-    def _report_html(c, user, job) -> str:
+    def _report_html(c, user, job, back: bool = True) -> str:
         free = job["result"]["free"]
         a = score.assess(free)
         shown = billing.current(c, user)["plan"]["steps_shown"]
         if shown is not None:
             a.steps = a.steps[:shown]
         return report.render(free, a, max_pages=job["params"].get("max_pages", 20),
-                             back_url=f"/jobs/{job['id']}")
+                             back_url=f"/jobs/{job['id']}" if back else None,
+                             brand=prefs.brand(c, user))
 
     @app.get("/jobs/{job_id}/report.pdf")
     def job_pdf(job_id: int, user=Depends(current), c=Depends(conn)):
@@ -534,6 +703,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
             months: int = Form(1), auto_renew: str = Form(""), csrf: str = Form(""),
             user=Depends(current), c=Depends(conn)):
         check_csrf(user, csrf)
+        owner_only(user)
         if choice:  # кнопка карточки: «тариф:месяцев»
             plan, _, m = choice.partition(":")
             months = int(m) if m.isdigit() else 1
@@ -549,6 +719,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
     def apply_promo(request: Request, promo: str = Form(""), csrf: str = Form(""),
                     user=Depends(current), c=Depends(conn)):
         check_csrf(user, csrf)
+        owner_only(user)
         try:
             got = promos.redeem_in_cabinet(c, user, promo)
         except Refused as exc:

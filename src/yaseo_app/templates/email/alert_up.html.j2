@@ -1,0 +1,5 @@
+{% extends "email/base.html.j2" %}
+{% block title %}{{ host }} снова открывается{% endblock %}
+{% block body %}
+  <p style="font-size:15px;line-height:1.5;margin:0 0 16px;">Сайт снова отвечает. Не открывался с {{ since|date }}. Если сайт лежал дольше суток, стоит проверить его в кабинете: страницы могли выпасть из поиска.</p>
+{% endblock %}

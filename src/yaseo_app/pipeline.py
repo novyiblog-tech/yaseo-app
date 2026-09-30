@@ -50,24 +50,38 @@ def _params(section: str, query: str, domain: str, region: int) -> dict:
     return {"query": query, "domain": domain}
 
 
-def _item(section: str, query: str, data: dict, domain: str) -> dict:
+def best_position(docs: list[dict], domain: str) -> int | None:
+    ours = [d["pos"] for d in docs if sources.same_site(d["domain"], domain)]
+    return min(ours) if ours else None
+
+
+def _item(section: str, query: str, data: dict, domain: str,
+          watched: list[str] = ()) -> dict:
+    """watched — конкуренты из настроек сайта: их место и упоминание берутся из того же
+    ответа поставщика, отдельных запросов нет."""
     if section == "demand":
         return {"query": query, "freq": data["freq"], "top": data["top"][:5]}
     if section == "positions":
-        ours = [d["pos"] for d in data["docs"] if sources.same_site(d["domain"], domain)]
-        return {"query": query, "position": min(ours) if ours else None,
+        item = {"query": query, "position": best_position(data["docs"], domain),
                 "top3": [d["domain"] for d in data["docs"][:3]]}
-    cited = [s for s in data["sources"]
-             if s["used"] is not False and sources.same_site(s["domain"], domain)]
-    rivals = [s["domain"] for s in data["sources"]
-              if s["used"] is not False and not sources.same_site(s["domain"], domain)]
-    return {"query": query, "cited": bool(cited),
+        if watched:
+            item["watched"] = {w: best_position(data["docs"], w) for w in watched}
+        return item
+    used = [s for s in data["sources"] if s["used"] is not False]
+    cited = [s for s in used if sources.same_site(s["domain"], domain)]
+    rivals = [s["domain"] for s in used if not sources.same_site(s["domain"], domain)]
+    item = {"query": query, "cited": bool(cited),
             "cited_position": cited[0]["position"] if cited else None,
             "mentioned": sources.host(domain) in data["text"].lower(),
             "rivals": list(dict.fromkeys(rivals))[:3]}
+    if watched:
+        item["watched"] = {w: any(sources.same_site(s["domain"], w) for s in used)
+                           for w in watched}
+    return item
 
 
-def _section(conn, meter, src, section, queries, domain, region, limit=None) -> dict:
+def _section(conn, meter, src, section, queries, domain, region, limit=None,
+             watched: list[str] = ()) -> dict:
     if src is None:
         return {"status": "off", "reason": "источник не подключён", "items": []}
     if not queries:
@@ -97,7 +111,7 @@ def _section(conn, meter, src, section, queries, domain, region, limit=None) -> 
                         "reason": f"поставщик отказал {in_row} раза подряд, раздел остановлен"}
             continue
         in_row = 0
-        items.append(_item(section, q, data, domain))
+        items.append(_item(section, q, data, domain, watched))
     status = "ok" if not errors else ("failed" if errors == len(items) else "partial")
     if note and status == "ok":
         status = "partial"
@@ -109,16 +123,21 @@ def run_audit(conn: psycopg.Connection, job: dict, user: dict,
     p = job["params"]
     url = p["url"]
     free = free_audit.run_isolated(url, max_pages=int(p.get("max_pages", 20)),
-                                   allow_private=allow_private)
+                                   allow_private=allow_private, exclude=p.get("exclude"),
+                                   gentle=bool(p.get("gentle")))
     fake = any(s.fake for s in srcs.values())
     meter = Meter(conn, user["id"], user["plan"], job["id"], fake=fake)
     domain = sources.host(url)
     queries = clean_queries(p.get("queries"))
     region = int(p.get("region", RUSSIA))
     limits = p.get("limits") or {}
-    paid = {section: _section(conn, meter, srcs.get(name), section, queries, domain, region,
-                              limits.get(section))
+    off = set(p.get("off") or ())
+    watched = list(p.get("rivals") or [])
+    paid = {section: ({"status": "off", "reason": "выключено в настройках сайта", "items": []}
+                      if section in off else
+                      _section(conn, meter, srcs.get(name), section, queries, domain, region,
+                               limits.get(section), watched))
             for section, name in SECTIONS}
     return {"schema": SCHEMA, "url": url, "sources_mode": "fake" if fake else "live",
-            "queries": queries, "region": region, "free": free, "paid": paid,
-            "spend": meter.job_summary()}
+            "queries": queries, "region": region, "rivals": watched, "free": free,
+            "paid": paid, "spend": meter.job_summary()}

@@ -219,3 +219,11 @@ tr:last-child td { border-bottom: 0; }
 .doc h2 { font-size: 18px; margin: 30px 0 10px; }
 .doc p { margin: 0 0 10px; color: var(--ink); }
 .doc p.muted { color: var(--ink-2); }
+
+.site-prefs select, .share input { width: 100%; }
+.share { margin-top: 14px; }
+.share .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.share .row input { flex: 1 1 260px; }
+select { padding: 12px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; }
+.locked { color: var(--ink-2); }
+.field label.check { text-transform: none; letter-spacing: 0; font-size: var(--size-small); font-weight: 400; color: var(--ink-2); }

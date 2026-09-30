@@ -1,0 +1,8 @@
+{% extends "email/base.html.j2" %}
+{% set button_url = base ~ "/sites/" ~ site.id %}{% set button_text = "Открыть сайт в кабинете" %}
+{% block title %}{{ host }} не открывается{% endblock %}
+{% block body %}
+  <p style="font-size:15px;line-height:1.5;margin:0 0 16px;">Два часа подряд сайт не отвечает посетителям{% if why %}: {{ why }}{% endif %}. Пока он лежит, Яндекс не может его обойти, а люди уходят к конкурентам.</p>
+  <p style="font-size:15px;line-height:1.5;margin:0 0 16px;">Что сделать: написать хостингу или программисту. Когда сайт откроется, пришлём письмо.</p>
+{% endblock %}
+{% block foot %}<p style="font-size:13px;color:#8a8a8a;margin:20px 0 0;">Срочные письма выключаются в настройках кабинета.</p>{% endblock %}

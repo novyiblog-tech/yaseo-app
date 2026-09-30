@@ -24,13 +24,14 @@
     <h2>Место в Яндексе — каждый день</h2>
     <p class="muted" style="margin-bottom:14px">Каждую ночь смотрим, на каком месте ваш сайт в поиске Яндекса по выбранным фразам, и раз в неделю присылаем письмо: что выросло, что упало.</p>
     {% if quota.limit %}
-    <p class="muted small" style="margin-bottom:14px">Смотрим первую десятку результатов по всей России. Фраз под наблюдением: {{ quota.used }} из {{ quota.limit }} по тарифу.</p>
+    <p class="muted small" style="margin-bottom:14px">Смотрим первую десятку результатов{% if eff.region == 225 %} по всей России{% else %}, выдача — {{ region_name(eff.region) }}{% endif %}. Фраз под наблюдением: {{ quota.used }} из {{ quota.limit }} по тарифу.</p>
     {% if positions %}
     <table>
-      <thead><tr><th>Фраза</th><th class="num">Место</th><th class="num">За неделю</th><th>30 дней</th><th></th></tr></thead>
+      <thead><tr><th>Фраза</th><th class="num">Место</th>{% for w in eff.rivals %}<th class="num">{{ w }}</th>{% endfor %}<th class="num">За неделю</th><th>30 дней</th><th></th></tr></thead>
       <tbody>{% for p in positions %}
         <tr><td>{{ p.query }}</td>
           <td class="num">{% if p.day %}{{ p.position or 'вне топ-10' }}{% else %}<span class="muted">ждёт съёма</span>{% endif %}</td>
+          {% for w in eff.rivals %}<td class="num muted">{{ p.rivals.get(w) or '—' }}</td>{% endfor %}
           <td class="num">{% if p.delta %}<span class="{{ 'up' if p.delta > 0 else 'down' }}">{{ '▲' if p.delta > 0 else '▼' }} {{ p.delta|abs }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
           <td class="spark-cell">{{ p.spark|safe }}</td>
           <td class="num"><form method="post" action="/sites/{{ site.id }}/track/{{ p.id }}/delete">
@@ -49,6 +50,48 @@
     {% else %}
     <p class="muted">Доступно в тарифах от «Старт». <a href="/billing">Тарифы</a></p>
     {% endif %}
+  </section>
+
+  {% macro locked(code) %}<span class="muted small">с тарифа «{{ feature_plan[code] }}» · <a href="/billing">тарифы</a></span>{% endmacro %}
+  <form class="card site-prefs" method="post" action="/sites/{{ site.id }}/settings" id="settings">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
+    <h2>Настройки сайта</h2>
+    {% if prefs_error %}<div class="error" role="alert">{{ prefs_error }}</div>{% endif %}
+    <div class="field"><label for="region">Город для места в Яндексе и спроса
+      <span class="hint">Выдача в Краснодаре и в Москве разная. Сменить город — история мест начнётся заново.</span></label>
+      {% if feats.region %}<select id="region" name="region">{% for code, name in regions %}<option value="{{ code }}" {% if code == site.region %}selected{% endif %}>{{ name }}</option>{% endfor %}</select>
+      {% else %}<div>Вся Россия · {{ locked('region') }}</div>{% endif %}</div>
+    <div class="field"><label for="schedule">Проверять сайт автоматически
+      <span class="hint">С фразами последней проверки, результат — письмом. Тратит проверки тарифа.</span></label>
+      {% if feats.schedule %}<select id="schedule" name="schedule">{% for code, name in schedules.items() %}<option value="{{ code }}" {% if code == site.schedule %}selected{% endif %}>{{ name }}</option>{% endfor %}</select>
+      {% else %}<div>{{ locked('schedule') }}</div>{% endif %}</div>
+    <div class="field"><label for="exclude">Не проверять разделы сайта
+      <span class="hint">Путь с новой строки: /cart, /personal, /catalog/*/filter, *?sort=*. Корзина, фильтры и личный кабинет дают ложные замечания.</span></label>
+      {% if feats.exclude %}<textarea id="exclude" name="exclude" style="min-height:80px" placeholder="/cart&#10;/personal&#10;*?sort=*">{{ exclude_text if exclude_text is defined else (site.exclude or [])|join('\n') }}</textarea>
+      {% else %}<div>{{ locked('exclude') }}</div>{% endif %}</div>
+    {% if feats.gentle %}<label class="check"><input type="checkbox" name="gentle" value="yes" {% if site.gentle %}checked{% endif %}>
+      <span>Бережный обход: страницы по одной раз в 2 секунды — если хостинг слабый и сайт падает от нагрузки. Проверка дольше.</span></label>
+    {% else %}<p class="check"><span>Бережный обход · {{ locked('gentle') }}</span></p>{% endif %}
+    <div class="field"><label>Какие разделы собирать
+      <span class="hint">Выключите ненужное — проверка быстрее, а ответы нейросети не тратятся.</span></label>
+      {% if feats.sections %}{% for key in ('demand', 'positions', 'answers') %}
+      <label class="check" style="margin-top:6px"><input type="checkbox" name="sec_{{ key }}" value="yes" {% if (site.sections or {}).get(key, true) %}checked{% endif %}><span>{{ SECTION_TITLES[key] }}</span></label>{% endfor %}
+      {% else %}<div>Все разделы · {{ locked('sections') }}</div>{% endif %}</div>
+    <div class="field"><label for="rivals">Конкуренты — до 5 сайтов
+      <span class="hint">Покажем их место в Яндексе и называет ли их нейросеть — по тем же фразам, без лишних трат.</span></label>
+      {% if feats.rivals %}<textarea id="rivals" name="rivals" style="min-height:80px" placeholder="rival.ru&#10;competitor.ru">{{ rivals_text if rivals_text is defined else (site.rivals or [])|join('\n') }}</textarea>
+      {% else %}<div>{{ locked('rivals') }}</div>{% endif %}</div>
+    {% if feats.region or feats.schedule or feats.exclude or feats.gentle or feats.sections or feats.rivals %}
+    <p style="margin-top:18px"><button class="btn ghost" type="submit">Сохранить настройки</button></p>{% endif %}
+  </form>
+
+  <section class="card">
+    <h2>Яндекс Вебмастер и Метрика</h2>
+    {% if not feats.webmaster %}<p class="muted small">Настоящие показы, клики и переходы из поиска прямо в кабинете · {{ locked('webmaster') }}</p>
+    {% elif yandex_link %}<p class="muted small">Показы и клики из Вебмастера, переходы из Метрики — за 28 дней, берём у Яндекса при открытии и не храним.</p>
+      <p style="margin-top:12px"><a class="btn ghost" href="/sites/{{ site.id }}/yandex">Открыть данные Яндекса</a></p>
+    {% elif not yandex_ready %}<p class="muted small">Настоящие показы, клики и переходы из поиска. Подключение появится, когда сервис зарегистрирует приложение в Яндекс ID.</p>
+    {% else %}<p class="muted small">Подключите Яндекс ID, на котором сайт подтверждён в Вебмастере и стоит счётчик Метрики, — покажем настоящие показы, клики и переходы из поиска. <a href="/settings#yandex">Подключить в настройках</a>.</p>{% endif %}
   </section>
 
   <div class="card table-scroll">

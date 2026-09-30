@@ -1,0 +1,10 @@
+{% extends "email/base.html.j2" %}
+{% set button_url = base ~ "/sites/" ~ site.id ~ "#positions" %}{% set button_text = "Места по дням" %}
+{% block title %}{{ host }}: места в Яндексе упали{% endblock %}
+{% block body %}
+  <p style="font-size:15px;line-height:1.5;margin:0 0 16px;">Съём {{ day.strftime('%d.%m.%Y') }}, {{ region }}. По этим фразам сайт резко опустился:</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;margin:0 0 18px;">
+  {% for d in drops %}<tr><td style="padding:6px 0;border-bottom:1px solid #eee;">{{ d.query }}</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right;white-space:nowrap;">{{ d.before }} → {{ d.now or 'вне десятки' }}</td></tr>{% endfor %}
+  </table>
+  <p style="font-size:15px;line-height:1.5;margin:0 0 16px;">Одна ночь — ещё не тренд: выдача колеблется. Если через пару дней место не вернётся, запустите проверку сайта — она покажет, не сломалось ли что-то на страницах.</p>
+{% endblock %}

@@ -378,3 +378,75 @@ BEGIN
         INSERT INTO applied (name) VALUES ('autorenew-off-2026-09-30');
     END IF;
 END $$;
+
+-- Настройки кабинета (таблица «yaseo — тарифы и настройки», столбец «с тарифа»,
+-- Сергей, 30.09.2026). Доступна, если тариф кабинета не ниже from_plan по plans.sort.
+CREATE TABLE IF NOT EXISTS features (
+    code      text PRIMARY KEY,
+    title     text NOT NULL,
+    from_plan text NOT NULL REFERENCES plans(code)
+);
+INSERT INTO features (code, title, from_plan) VALUES
+    ('region',    'Город для места в Яндексе',     'start'),
+    ('schedule',  'Проверять сайт автоматически',  'start'),
+    ('alerts',    'Срочные письма',                'start'),
+    ('exclude',   'Не проверять разделы сайта',    'start'),
+    ('gentle',    'Бережный обход',                'start'),
+    ('share',     'Ссылка на отчёт без входа',     'start'),
+    ('webmaster', 'Яндекс Вебмастер и Метрика',    'start'),
+    ('sections',  'Какие разделы проверять',       'pro'),
+    ('rivals',    'Конкуренты',                    'pro'),
+    ('brand',     'Логотип и контакты в отчёте',   'pro'),
+    ('team',      'Доступ коллегам',               'agency')
+ON CONFLICT (code) DO NOTHING;
+
+-- Настройки сайта.
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS region int NOT NULL DEFAULT 225;
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS schedule text NOT NULL DEFAULT 'off'
+    CHECK (schedule IN ('off', 'week', 'month'));
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS schedule_queries jsonb NOT NULL DEFAULT '[]';
+-- День последней попытки автопроверки: кончились проверки — следующая попытка завтра.
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS schedule_tried date;
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS exclude jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS gentle boolean NOT NULL DEFAULT false;
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS sections jsonb NOT NULL
+    DEFAULT '{"demand": true, "positions": true, "answers": true}';
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS rivals jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE positions ADD COLUMN IF NOT EXISTS rivals jsonb;
+
+-- Настройки кабинета.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS alerts boolean NOT NULL DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_name text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_contacts text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_logo bytea;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_logo_type text;
+-- Коллега работает в кабинете владельца: свой вход, общие сайты, проверки и тариф.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS owner_id bigint REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE email_tokens DROP CONSTRAINT IF EXISTS email_tokens_purpose_check;
+ALTER TABLE email_tokens ADD CONSTRAINT email_tokens_purpose_check
+    CHECK (purpose IN ('confirm', 'reset', 'team'));
+
+-- Ссылка на отчёт без входа: случайный токен, выключается владельцем.
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS share_token text UNIQUE;
+
+-- Срочные письма: здоровье сайта по последней проверке планировщика.
+CREATE TABLE IF NOT EXISTS site_health (
+    site_id     bigint PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+    checked_at  timestamptz NOT NULL DEFAULT now(),
+    ok          boolean NOT NULL,
+    fails       int NOT NULL DEFAULT 0,
+    error       text,
+    tls_until   date,
+    down_since  timestamptz
+);
+
+-- Вебмастер и Метрика: токен Яндекс ID владельца. Данные Вебмастера и Метрики не храним —
+-- только показываем владельцу (условия Яндекса), хранится лишь доступ.
+CREATE TABLE IF NOT EXISTS yandex_links (
+    user_id       bigint PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    access_token  text NOT NULL,
+    refresh_token text,
+    expires_at    timestamptz,
+    login         text,
+    created_at    timestamptz NOT NULL DEFAULT now()
+);

@@ -18,7 +18,7 @@ from pathlib import Path
 
 import psycopg
 
-from yaseo_app import db, free_audit, history, jobs, monitor, pipeline, sources
+from yaseo_app import db, free_audit, history, jobs, monitor, pipeline, sources, watch
 
 log = logging.getLogger("yaseo_app.worker")
 
@@ -45,6 +45,8 @@ def run_once(conn: psycopg.Connection, worker_id: str, srcs: dict,
             result = pipeline.run_audit(conn, job, user, srcs, allow_private=allow_private)
         elif job["kind"] == "positions":
             result = monitor.run_positions(conn, job, user, srcs)
+        elif job["kind"] == "health":
+            result = watch.run_health(conn, job, allow_private=allow_private)
         else:
             raise ValueError(f"неизвестный вид задачи «{job['kind']}»")
     except pipeline.Postpone as exc:
@@ -64,6 +66,12 @@ def run_once(conn: psycopg.Connection, worker_id: str, srcs: dict,
         jobs.finish(conn, job, result, summary)
     except jobs.LeaseLost as exc:
         log.warning("%s", exc)
+        return job
+    if job["kind"] == "audit":
+        try:
+            watch.after_audit(conn, job)
+        except Exception as exc:  # письмо не должно ронять исполнителя
+            log.warning("задача %s: письмо об автопроверке: %s", job["id"], exc)
     return job
 
 

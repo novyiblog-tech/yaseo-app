@@ -1,0 +1,7 @@
+{% extends "email/base.html.j2" %}
+{% set button_url = link %}{% set button_text = "Задать пароль и войти" %}
+{% block title %}Вас пригласили в кабинет yaseo{% endblock %}
+{% block body %}
+  <p style="font-size:15px;line-height:1.5;margin:0 0 16px;">{{ owner.email }} приглашает вас в свой кабинет в yaseo: сайты, проверки сайтов и места в Яндексе. Задайте пароль — и можно работать.</p>
+{% endblock %}
+{% block foot %}<p style="font-size:13px;color:#8a8a8a;margin:20px 0 0;">Ссылка действует 7 дней. Если вы не ждали приглашения — просто удалите письмо.</p>{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "email/base.html.j2" %}
+{% set button_url = base ~ "/jobs/" ~ job.id %}{% set button_text = "Открыть отчёт" %}
+{% block title %}{{ host }}: {{ job.score }} из 100{% endblock %}
+{% block body %}
+  <p style="font-size:15px;line-height:1.5;margin:0 0 16px;">Автопроверка по расписанию готова{% if delta is not none %}: {% if delta > 0 %}оценка выросла на {{ delta }}{% elif delta < 0 %}оценка упала на {{ -delta }}{% else %}оценка не изменилась{% endif %} с прошлой проверки{% endif %}. Что исправлено, что появилось и что делать дальше — в отчёте.</p>
+{% endblock %}
+{% block foot %}<p style="font-size:13px;color:#8a8a8a;margin:20px 0 0;">Расписание меняется в настройках сайта в кабинете.</p>{% endblock %}

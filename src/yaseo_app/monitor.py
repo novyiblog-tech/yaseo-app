@@ -39,9 +39,11 @@ def quota(conn: psycopg.Connection, user: dict) -> dict:
 
 
 def add_queries(conn: psycopg.Connection, user: dict, site: dict, text: str,
-                region: int = RUSSIA) -> int:
-    from yaseo_app import verify
+                region: int | None = None) -> int:
+    from yaseo_app import prefs, verify
     verify.require_confirmed(user)
+    if region is None:
+        region = prefs.effective(conn, user, site)["region"]
     q = quota(conn, user)
     if q["limit"] == 0:
         raise Refused("Наблюдение за позициями — в тарифах «Старт» и выше.")
@@ -96,8 +98,10 @@ def run_positions(conn: psycopg.Connection, job: dict, user: dict,
     if site is None:
         return {"checked": 0, "reason": "сайт удалён"}
     day = date.fromisoformat(job["params"]["day"])
+    from yaseo_app import prefs
     src = srcs.get("yandex-serp")
     queries = _allowed(conn, user, site["id"])
+    watched = prefs.effective(conn, user, site)["rivals"]
     fake = any(s.fake for s in srcs.values())
     meter = Meter(conn, user["id"], user["plan"], job["id"], fake=fake)
     domain = sources.host(site["url"])
@@ -117,15 +121,19 @@ def run_positions(conn: psycopg.Connection, job: dict, user: dict,
             continue
         ours = [d for d in data["docs"] if sources.same_site(d["domain"], domain)]
         best = min(ours, key=lambda d: d["pos"]) if ours else None
+        rivals = {w: pipeline.best_position(data["docs"], w) for w in watched} or None
         conn.execute(
-            "INSERT INTO positions (site_id, query, region, day, position, url, top3)"
-            " VALUES (%s, %s, %s, %s, %s, %s, %s)"
+            "INSERT INTO positions (site_id, query, region, day, position, url, top3, rivals)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
             " ON CONFLICT (site_id, query, region, day) DO UPDATE SET position = excluded.position,"
-            " url = excluded.url, top3 = excluded.top3, checked_at = now()",
+            " url = excluded.url, top3 = excluded.top3, rivals = excluded.rivals, checked_at = now()",
             (site["id"], q["query"], q["region"], day, best["pos"] if best else None,
              best["url"] if best else None,
-             Jsonb([d["domain"] for d in data["docs"][:3]])))
+             Jsonb([d["domain"] for d in data["docs"][:3]]), Jsonb(rivals) if rivals else None))
         checked += 1
+    if checked:
+        from yaseo_app import watch
+        watch.check_positions(conn, user, site, day)
     return {"day": day.isoformat(), "checked": checked, "errors": errors,
             "skipped": len(queries) - checked - errors, "reason": reason,
             "sources_mode": "fake" if fake else "live", "spend": meter.job_summary()}
@@ -141,11 +149,13 @@ def _as_score(pos: int | None) -> int:
 def site_table(conn: psycopg.Connection, site_id: int, today: date, days: int = 30) -> list[dict]:
     """По каждому запросу: место сегодня, неделю назад, изменение и график за месяц."""
     rows = conn.execute(
-        "SELECT query, region, day, position FROM positions WHERE site_id = %s AND day > %s"
+        "SELECT query, region, day, position, rivals FROM positions WHERE site_id = %s AND day > %s"
         " ORDER BY day", (site_id, today - timedelta(days=days))).fetchall()
     series: dict[tuple, dict] = {}
+    rivals: dict[tuple, dict] = {}
     for r in rows:
         series.setdefault((r["query"], r["region"]), {})[r["day"]] = r["position"]
+        rivals[(r["query"], r["region"])] = r["rivals"] or {}  # последний съём
     out = []
     for t in tracked(conn, site_id):
         s = series.get((t["query"], t["region"]), {})
@@ -156,6 +166,7 @@ def site_table(conn: psycopg.Connection, site_id: int, today: date, days: int = 
         delta = ((week or DEPTH + 1) - (now or DEPTH + 1)) if has_week else None
         out.append({"id": t["id"], "query": t["query"], "position": now, "day": last_day,
                     "week_ago": week, "delta": delta,
+                    "rivals": rivals.get((t["query"], t["region"]), {}),
                     "spark": history.sparkline([_as_score(s[d]) for d in sorted(s)])})
     return out
 

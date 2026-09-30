@@ -19,7 +19,7 @@
       <a href="/sites">Мои сайты</a>
       <a href="/billing">Тариф</a>
       <a href="/settings">Настройки</a>
-      <span class="muted">{{ user.email }}</span>
+      <span class="muted">{{ user.actor_email or user.email }}</span>
       <form method="post" action="/logout">
         <input type="hidden" name="csrf" value="{{ user.csrf }}">
         <button class="linkbtn" type="submit">Выйти</button>

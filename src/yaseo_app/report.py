@@ -85,7 +85,9 @@ def _issue_rows(result: dict) -> list[dict]:
 
 def render(result: dict, assessment: score.Assessment | None = None,
            kind: str = "Бесплатная проверка", max_pages: int = 20,
-           back_url: str | None = None) -> str:
+           back_url: str | None = None, brand: dict | None = None) -> str:
+    """brand — свой логотип и контакты вместо знака yaseo: {"name", "contacts", "logo"},
+    logo — data:-адрес картинки."""
     a = assessment or score.assess(result)
     color = score.color_of(a.total)
     collected = datetime.fromisoformat(result["collected_at"]).strftime("%d.%m.%Y %H:%M UTC")
@@ -106,6 +108,7 @@ def render(result: dict, assessment: score.Assessment | None = None,
         issues=_issue_rows(result),
         engine=result.get("engine", ""),
         max_pages=max_pages,
+        brand=brand,
     )
     return _nbsp_numbers(html)
 

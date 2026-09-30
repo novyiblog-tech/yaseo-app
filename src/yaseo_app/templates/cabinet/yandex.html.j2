@@ -1,0 +1,51 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}Яндекс — {{ site.url }}{% endblock %}
+{% block main %}
+{% set wm = data.webmaster or {} %}{% set mk = data.metrika or {} %}
+<div class="stack">
+  <div>
+    <div class="crumbs"><a href="/sites">Сайты</a> / <a href="/sites/{{ site.id }}">{{ site.url }}</a> /</div>
+    <h1>Вебмастер и Метрика</h1>
+    <p class="muted small">Данные Яндекса за 28 дней, берём при открытии страницы и не храним.</p>
+  </div>
+  {% if data.error %}<div class="error" role="alert">Яндекс не ответил: {{ data.error }}</div>{% endif %}
+
+  <section class="card table-scroll">
+    <h2>Вебмастер: как сайт показывается в поиске</h2>
+    {% if wm.error %}<p class="muted">Вебмастер ответил ошибкой: {{ wm.error }}</p>
+    {% elif not wm.found %}<p class="muted">Сайта нет среди подтверждённых в Вебмастере этого Яндекс ID. Добавьте и подтвердите его на webmaster.yandex.ru.</p>
+    {% else %}
+    <div class="diff-nums">
+      <div><b>{{ wm.in_search|num if wm.in_search is not none else '—' }}</b>страниц в поиске</div>
+      <div><b>{{ wm.excluded|num if wm.excluded is not none else '—' }}</b>исключено из поиска</div>
+      <div><b>{{ wm.problems.values()|sum }}</b>проблем сайта по Вебмастеру</div>
+    </div>
+    {% if wm.queries %}
+    <h3 style="margin-top:18px">Запросы с показами, {{ wm['from'].strftime('%d.%m') }}–{{ wm.to.strftime('%d.%m.%Y') }}</h3>
+    <table>
+      <thead><tr><th>Запрос</th><th class="num">Показы</th><th class="num">Клики</th><th class="num">Среднее место показа</th></tr></thead>
+      <tbody>{% for q in wm.queries %}<tr><td>{{ q.query }}</td><td class="num">{{ q.shows|num }}</td><td class="num">{{ q.clicks|num }}</td>
+        <td class="num">{{ '%.1f'|format(q.position) if q.position is not none else '—' }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% else %}<p class="muted" style="margin-top:12px">Показов за эти дни нет.</p>{% endif %}
+    {% endif %}
+  </section>
+
+  <section class="card table-scroll">
+    <h2>Метрика: откуда приходят люди</h2>
+    {% if mk.error %}<p class="muted">Метрика ответила ошибкой: {{ mk.error }}</p>
+    {% elif not mk.found %}<p class="muted">Счётчика Метрики для этого сайта у этого Яндекс ID нет.</p>
+    {% else %}
+    <div class="diff-nums">
+      <div><b>{{ mk.total|num }}</b>визитов всего</div>
+      <div><b>{{ (mk.organic.visits if mk.organic else 0)|num }}</b>из поисковых систем</div>
+    </div>
+    <table style="margin-top:14px">
+      <thead><tr><th>Источник</th><th class="num">Визиты</th><th class="num">Отказы</th></tr></thead>
+      <tbody>{% for x in mk.sources %}<tr><td>{{ x.name }}</td><td class="num">{{ x.visits|num }}</td>
+        <td class="num">{{ '%.0f %%'|format(x.bounce) if x.bounce is not none else '—' }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

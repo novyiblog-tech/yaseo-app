@@ -32,15 +32,37 @@ SECRET_ENV = (
     "OPENAI_API_KEY",
     "GEMINI_API_KEY",
     "ANTHROPIC_API_KEY",
+    "YASEO_YANDEX_CLIENT_ID",
+    "YASEO_YANDEX_CLIENT_SECRET",
 )
+# Бережный обход: пауза между страницами вместо обычных 0,3 с — для слабого хостинга.
+GENTLE_DELAY = 2.0
 
 
 class AuditFailed(Exception):
     pass
 
 
+def excluded(url: str, patterns: list[str]) -> bool:
+    """Попадает ли адрес под исключения сайта. Без звёздочки — начало пути (/cart
+    исключает /cart и /cart/1), со звёздочкой — шаблон на путь с параметрами."""
+    from fnmatch import fnmatchcase
+    from urllib.parse import urlsplit
+    parts = urlsplit(url)
+    path = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
+    for p in patterns or ():
+        if "*" in p:
+            if fnmatchcase(path, p) or fnmatchcase(path, p.rstrip("*") + "*"):
+                return True
+        elif path == p or path.startswith(p.rstrip("/") + "/") or path.startswith(p + "?") \
+                or (p.endswith("/") and path.startswith(p)):
+            return True
+    return False
+
+
 def collect(url: str, max_pages: int = 20, allow_private: bool = False,
-            use_proxy: bool = False) -> dict:
+            use_proxy: bool = False, exclude: list[str] | None = None,
+            gentle: bool = False) -> dict:
     """Запускает движок в текущем процессе. Снаружи звать run_isolated()."""
     from importlib.metadata import version
 
@@ -53,8 +75,14 @@ def collect(url: str, max_pages: int = 20, allow_private: bool = False,
     private = True if allow_private else None
     net.check_url(url, allow_private=private)
 
+    if exclude:
+        # Движок не знает про исключения: фильтр ставим на его проверку «обходить ли адрес».
+        # Процесс отдельный на каждый аудит, подмена не протекает в чужие проверки.
+        crawlable = audit._crawlable
+        audit._crawlable = lambda u: crawlable(u) and not excluded(u, exclude)
     site = audit.audit_site(url, max_pages=max_pages, use_proxy=use_proxy,
-                            allow_private=private)
+                            allow_private=private,
+                            **({"delay": GENTLE_DELAY} if gentle else {}))
     geo = readiness.check(url, allow_private=private)
     audit_dict = dataclasses.asdict(site)
     checks = site_checks.run(url, allow_private=allow_private, use_proxy=use_proxy)
@@ -65,6 +93,8 @@ def collect(url: str, max_pages: int = 20, allow_private: bool = False,
         "engine": version("yaseo"),
         "collected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "paid_calls": 0,
+        "exclude": list(exclude or []),
+        "gentle": gentle,
         "audit": audit_dict,
         "checks": checks,
         "geo": dataclasses.asdict(geo),
@@ -82,7 +112,8 @@ def isolated_env(workdir: Path) -> dict[str, str]:
 
 
 def run_isolated(url: str, max_pages: int = 20, allow_private: bool = False,
-                 use_proxy: bool = False, timeout: int = JOB_TIMEOUT) -> dict:
+                 use_proxy: bool = False, timeout: int = JOB_TIMEOUT,
+                 exclude: list[str] | None = None, gentle: bool = False) -> dict:
     with tempfile.TemporaryDirectory(prefix="yaseo-job-") as tmp:
         workdir = Path(tmp)
         (workdir / "empty.env").write_text("", encoding="utf-8")
@@ -93,6 +124,10 @@ def run_isolated(url: str, max_pages: int = 20, allow_private: bool = False,
             cmd.append("--allow-private")
         if use_proxy:
             cmd.append("--use-proxy")
+        if exclude:
+            cmd += ["--exclude", json.dumps(list(exclude), ensure_ascii=False)]
+        if gentle:
+            cmd.append("--gentle")
         try:
             done = subprocess.run(cmd, env=isolated_env(workdir), cwd=workdir,
                                   capture_output=True, text=True, timeout=timeout)
@@ -111,9 +146,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--allow-private", action="store_true")
     parser.add_argument("--use-proxy", action="store_true")
+    parser.add_argument("--exclude", default="[]", help="JSON-список исключённых путей")
+    parser.add_argument("--gentle", action="store_true")
     args = parser.parse_args(argv)
     try:
-        result = collect(args.url, args.max_pages, args.allow_private, args.use_proxy)
+        result = collect(args.url, args.max_pages, args.allow_private, args.use_proxy,
+                         exclude=json.loads(args.exclude), gentle=args.gentle)
     except Exception as exc:  # процесс-исполнитель: причина уходит родителю одной строкой
         print(f"{type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
