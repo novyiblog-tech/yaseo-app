@@ -20,7 +20,7 @@
         <div class="muted small">Сейчас</div>
         <h2 style="margin:4px 0 6px">{{ p.title }}</h2>
         <p class="muted small">
-        {% if p.period == 'free' %}{% if p.audits_per_period == 1 %}Одна проверка{% else %}{{ p.audits_per_period }} проверок{% endif %} за {{ p.free_every_days }} дней, первые {{ p.steps_shown }} шага из списка.{% if cur.sub and cur.end %} Действует до {{ cur.end|dt }}.{% endif %}
+        {% if p.period == 'free' %}{% if p.audits_per_period == 1 %}Одна проверка{% else %}{{ p.audits_per_period }} {{ p.audits_per_period|plural('проверка', 'проверки', 'проверок') }}{% endif %} за {{ p.free_every_days }} дней, {% if p.steps_shown %}первые {{ p.steps_shown }} {{ p.steps_shown|plural('шаг', 'шага', 'шагов') }} плана исправлений{% else %}полный план исправлений{% endif %}{% if p.pdf %} и PDF отчёта{% endif %}.{% if cur.sub and cur.end %} Действует до {{ cur.end|dt }}.{% endif %}
         {% elif cur.sub.status == 'past_due' %}Не удалось списать оплату. Повторим в течение трёх дней, потом тариф станет бесплатным.
         {% elif p.period == 'once' %}Действует до {{ cur.end|dt }}, без продления.
         {% elif cur.sub.auto_renew %}Продлится {{ cur.end|dt }} на {{ p.price_rub|rub }}.
