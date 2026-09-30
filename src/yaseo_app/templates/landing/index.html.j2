@@ -88,7 +88,7 @@
   <h2 class="l-h2">Как это <span class="acc">работает</span></h2>
   <div class="l-grid3">
     <div><span class="l-num">01</span><h3>Введите адрес</h3><p class="muted">И запросы, по которым вас ищут, — если хотите видеть спрос и позиции.</p></div>
-    <div><span class="l-num">02</span><h3>Пара минут</h3><p class="muted">Обходим до 50 страниц так, как их видит поисковый робот, и собираем данные поиска.</p></div>
+    <div><span class="l-num">02</span><h3>Пара минут</h3><p class="muted">Обходим от 30 до 200 страниц — в зависимости от тарифа — так, как их видит поисковый робот, и собираем данные поиска.</p></div>
     <div><span class="l-num">03</span><h3>Отчёт и наблюдение</h3><p class="muted">Отчёт на экране и в PDF. Дальше — позиции каждую ночь и письмо раз в неделю о том, что изменилось.</p></div>
   </div>
 </section>
@@ -96,12 +96,14 @@
 <section class="l-section">
   <p class="l-kick">05 / 06</p>
   <h2 class="l-h2">Тарифы <span class="acc">и&nbsp;лимиты</span></h2>
+  <p class="plans-hint" aria-hidden="true">Листайте вбок <span>→</span></p>
   <div class="plans">
     {% for t in plans %}
     <div class="plan"><h3>{{ t.title }}</h3>
       <div class="price">{{ t.price_rub|rub }}{% if t.period == 'month' %}<span>/мес</span>{% elif t.period == 'once' %}<span> разово</span>{% endif %}</div>
       <ul class="plain small"><li>{{ t.sites }} {{ 'сайт' if t.sites == 1 else 'сайта' if t.sites < 5 else 'сайтов' }}</li>
         <li>{% if t.period == 'free' %}проверка раз в {{ t.free_every_days }} дней{% else %}{{ t.audits_per_period }} {{ 'полный аудит' if t.audits_per_period == 1 else 'полных аудита' if t.audits_per_period < 5 else 'полных аудитов' }} за 30 дней{% endif %}</li>
+        {% if t.max_pages %}<li>до {{ t.max_pages }} {{ t.max_pages|plural('страницы', 'страниц', 'страниц') }} в проверке</li>{% endif %}
         <li>{% if t.ai_checks %}{{ t.ai_checks }} проверок в нейросетях{% else %}без нейросетей{% endif %}</li>
         {% if t.tracked_queries %}<li>{{ t.tracked_queries }} запросов под наблюдением</li>{% endif %}
         <li>{% if t.pdf %}PDF отчёта{% else %}отчёт на экране{% endif %}</li></ul></div>

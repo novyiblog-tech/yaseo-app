@@ -125,6 +125,7 @@ def audit_allowance(conn: psycopg.Connection, user: dict, site_url: str | None =
                           + "Следующую можно раньше на платном тарифе.")
         raise Refused(f"Проверки по тарифу «{p['title']}» на этот период закончились.")
     return {"plan": p["code"],
+            "max_pages": p.get("max_pages"),
             "queries": p["queries_per_audit"],
             "answers": _left(p["ai_checks"], used["ai_checks"])}
 

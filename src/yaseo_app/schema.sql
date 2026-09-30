@@ -160,6 +160,13 @@ INSERT INTO plans (code, title, price_rub, period, public, sort, sites, audits_p
     ('beta', 'Бета', 0, 'free', false, 0, 1, 3, 5, 0, 0, 30, NULL, true, false)
 ON CONFLICT (code) DO NOTHING;
 
+-- Сколько страниц обходит одна проверка. Сергей, 30.09.2026: бесплатно и бета — 30,
+-- платные — 100 / 150 / 200. Заполняется только пустое: правки в базе не затираются.
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS max_pages int;
+UPDATE plans SET max_pages = CASE code WHEN 'free' THEN 30 WHEN 'beta' THEN 30
+    WHEN 'once' THEN 100 WHEN 'start' THEN 100 WHEN 'pro' THEN 150 WHEN 'agency' THEN 200 END
+ WHERE max_pages IS NULL;
+
 -- Одна строка на пользователя: что у него сейчас. Нет строки — тариф free.
 -- Разовый аудит — период на 30 дней без продления.
 CREATE TABLE IF NOT EXISTS subscriptions (

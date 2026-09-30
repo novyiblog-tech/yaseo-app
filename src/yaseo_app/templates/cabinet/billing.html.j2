@@ -44,6 +44,7 @@
 
   <section>
     <h2>Тарифы</h2>
+    <p class="plans-hint" aria-hidden="true">Листайте вбок <span>→</span></p>
     <div class="plans">
       {% for t in plans %}
       <div class="plan{% if t.code == p.code %} current{% endif %}">
@@ -52,6 +53,7 @@
         <ul class="plain small">
           <li>{{ t.sites }} {{ 'сайт' if t.sites == 1 else 'сайта' if t.sites < 5 else 'сайтов' }}</li>
           <li>{% if t.period == 'free' %}проверка раз в {{ t.free_every_days }} дней{% else %}{{ t.audits_per_period }} полн. аудит{{ '' if t.audits_per_period == 1 else 'ов' if t.audits_per_period >= 5 else 'а' }} за 30 дней{% endif %}</li>
+          {% if t.max_pages %}<li>до {{ t.max_pages }} {{ t.max_pages|plural('страницы', 'страниц', 'страниц') }} в проверке</li>{% endif %}
           <li>до {{ t.queries_per_audit }} запросов в аудите</li>
           <li>{% if t.ai_checks %}{{ t.ai_checks }} проверок в нейросетях{% else %}<span class="muted">без нейросетей</span>{% endif %}</li>
           {% if t.tracked_queries %}<li>{{ t.tracked_queries }} запросов под наблюдением <span class="muted">— скоро</span></li>{% endif %}

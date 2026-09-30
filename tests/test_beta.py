@@ -120,6 +120,21 @@ class BetaPlanAndOfferTest(PgTestCase):
         super().setUpClass()
         cls.app = web.create_app(cls.dsn, allow_private=True, secure_cookies=False)
 
+    def test_pages_capped_by_plan(self):
+        """Бета обходит до 30 страниц, даже если попросить больше."""
+        from yaseo_app import accounts
+        [code] = beta.create(self.conn)
+        accounts.signup(self.conn, "p@t.ru", PASSWORD, True, invite=code)
+        self.conn.execute("UPDATE users SET email_confirmed_at = now()")
+        u = self.conn.execute("SELECT * FROM users").fetchone()
+        site = accounts.add_site(self.conn, u, "http://pages.example", allow_private=True)
+        jid = accounts.start_check(self.conn, u, site, max_pages=500)
+        job = self.conn.execute("SELECT params FROM jobs WHERE id = %s", (jid,)).fetchone()
+        self.assertEqual(job["params"]["max_pages"], 30)
+        caps = {r["code"]: r["max_pages"] for r in self.conn.execute("SELECT code, max_pages FROM plans")}
+        self.assertEqual([caps[c] for c in ("free", "beta", "once", "start", "pro", "agency")],
+                         [30, 30, 100, 100, 150, 200])
+
     def test_beta_plan_five_checks_in_30_days(self):
         from yaseo_app import accounts
         [code] = beta.create(self.conn)   # по умолчанию код даёт тариф «Бета»

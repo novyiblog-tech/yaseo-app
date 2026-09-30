@@ -22,7 +22,7 @@ LOGIN_WINDOW = timedelta(minutes=15)
 LOGIN_MAX_FAILS = 8
 MAX_SITES = 20
 MAX_ACTIVE_JOBS = 3
-MAX_PAGES = 50
+MAX_PAGES = 200   # потолок движка; сколько обходить на деле — plans.max_pages
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 _SCRYPT = {"n": 2 ** 14, "r": 8, "p": 1, "dklen": 32}
@@ -271,7 +271,8 @@ def start_check(conn: psycopg.Connection, user: dict, site: dict, queries_text: 
     queries = parse_queries(queries_text)
     if allow["queries"] is not None:
         queries = queries[:allow["queries"]]
-    params = {"url": site["url"], "max_pages": max(1, min(int(max_pages), MAX_PAGES)),
+    cap = min(allow["max_pages"] or MAX_PAGES, MAX_PAGES)
+    params = {"url": site["url"], "max_pages": max(1, min(int(max_pages), cap)),
               "queries": queries, "limits": {"answers": allow["answers"]}}
     job_id = jobs.enqueue(conn, user["id"], "audit", params, site_id=site["id"])
     conn.execute("UPDATE jobs SET plan = %s WHERE id = %s", (allow["plan"], job_id))
