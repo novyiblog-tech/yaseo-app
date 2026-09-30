@@ -107,6 +107,9 @@ class WebTest(PgTestCase):
 
     def test_full_flow_on_virtual_site(self):
         self.signup()
+        # фразы — не в бесплатной проверке: даём кабинету «Старт»
+        self.conn.execute("INSERT INTO subscriptions (user_id, plan, status, period_start, period_end)"
+                          " SELECT id, 'start', 'active', now(), now() + interval '30 days' FROM users")
         page = self.client.get("/sites").text
         r = self.client.post("/sites", data={"url": self.url, "csrf": csrf(page)})
         self.assertIn("Новая проверка", r.text)

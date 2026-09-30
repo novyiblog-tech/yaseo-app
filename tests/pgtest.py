@@ -33,7 +33,9 @@ class PgTestCase(unittest.TestCase):
         self.conn.execute("TRUNCATE spend, cache, jobs, sites, users RESTART IDENTITY CASCADE")
         self.conn.execute("DROP TABLE IF EXISTS fake_provider")
         self.conn.execute("TRUNCATE outbox, email_tokens, invites, waitlist CASCADE")
+        self.conn.execute("DELETE FROM plan_terms")
         self.conn.execute("DELETE FROM plans")
+        self.conn.execute("DELETE FROM applied")  # тарифы — как в свежей базе
         self.conn.execute("DELETE FROM sources")
         db.migrate(self.conn)  # вернуть источники к заводским настройкам
 

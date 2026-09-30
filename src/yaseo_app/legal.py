@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import os
 
-OFFER_VERSION = "30.09.2026"
+# Вторая редакция 30.09.2026: сроки 1 и 3 месяца, без автосписания по умолчанию, промокод.
+OFFER_VERSION = "30.09.2026-2"
 
 FIELDS = {
     "operator": ("YASEO_OPERATOR", "наименование ИП"),

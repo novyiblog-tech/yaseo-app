@@ -57,7 +57,7 @@ def normalize_email(email: str) -> str:
 
 
 def signup(conn: psycopg.Connection, email: str, password: str, consent: bool,
-           ip: str | None = None, invite: str | None = None, offer: bool = True) -> dict:
+           ip: str | None = None, promo: str | None = None, offer: bool = True) -> dict:
     email = normalize_email(email)
     if not EMAIL_RE.match(email) or len(email) > 254:
         raise Refused("Проверьте адрес почты.")
@@ -67,12 +67,12 @@ def signup(conn: psycopg.Connection, email: str, password: str, consent: bool,
         raise Refused("Без согласия на обработку персональных данных зарегистрировать нельзя.")
     if not offer:
         raise Refused("Чтобы зарегистрироваться, примите условия оферты.")
-    from yaseo_app import beta, legal, verify
+    from yaseo_app import legal, verify
+    from yaseo_app import promo as promos
     verify.check_signup_ip(conn, ip)
-    if beta.enabled():
-        if not invite:
-            raise Refused("Сейчас закрытая бета: регистрация по коду приглашения.")
-        beta.check(conn, invite)
+    promo = (promo or "").strip() or None
+    if promo:
+        promos.check(conn, promo)
     with conn.transaction():
         row = conn.execute(
             "INSERT INTO users (email, password_hash, consent_at, signup_ip, offer_version,"
@@ -82,8 +82,8 @@ def signup(conn: psycopg.Connection, email: str, password: str, consent: bool,
         ).fetchone()
         if row is None:
             raise Refused("Этот адрес уже зарегистрирован — войдите.")
-        if invite:
-            beta.redeem(conn, row, invite)
+        if promo:
+            promos.redeem(conn, row, promo)
     verify.send_confirmation(conn, row)
     return row
 

@@ -1,0 +1,12 @@
+{% extends "email/base.html.j2" %}
+{% set button_url = base ~ "/billing" %}{% set button_text = "Продлить или сменить тариф" if amount is none else "Открыть тариф" %}
+{% block title %}Тариф «{{ plan.title }}» заканчивается {{ sub.period_end|date }}{% endblock %}
+{% block body %}
+{% if amount is not none %}
+  <p style="font-size:15px;line-height:1.5;margin:0 0 16px;">Включено автопродление: {{ sub.period_end|date }} спишем {{ amount|rub }} с сохранённой карты за следующий срок. Если продлевать не нужно — выключите автопродление в настройках кабинета.</p>
+{% else %}
+  <p style="font-size:15px;line-height:1.5;margin:0 0 16px;">Сам тариф не продлится и деньги не спишутся. Если сервис нужен дальше, продлите тариф в кабинете — новый срок добавится к текущему:</p>
+  <p style="font-size:15px;line-height:1.6;margin:0 0 16px;">на месяц — {{ plan.price_rub|rub }}{% for t in terms %}<br>на {{ t.months }} месяца — {{ t.price_rub|rub }}, выгоднее на {{ t.saving|rub }}{% endfor %}</p>
+  <p style="font-size:15px;line-height:1.5;margin:0 0 20px;">Или выберите другой тариф. После {{ sub.period_end|date }} кабинет перейдёт на бесплатную проверку, отчёты и сайты останутся.</p>
+{% endif %}
+{% endblock %}

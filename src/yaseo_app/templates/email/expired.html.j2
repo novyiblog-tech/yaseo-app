@@ -1,0 +1,7 @@
+{% extends "email/base.html.j2" %}
+{% set button_url = base ~ "/billing" %}{% set button_text = "Продлить или сменить тариф" %}
+{% block title %}Тариф «{{ plan.title }}» закончился{% endblock %}
+{% block body %}
+  <p style="font-size:15px;line-height:1.5;margin:0 0 16px;">Срок тарифа закончился {{ sub.period_end|date }}, кабинет перешёл на бесплатную проверку. Сайты, отчёты и история мест остались — ежедневные места и письмо недели вернутся, как только продлите.</p>
+  <p style="font-size:15px;line-height:1.6;margin:0 0 20px;">«{{ plan.title }}» на месяц — {{ plan.price_rub|rub }}{% for t in terms %}<br>на {{ t.months }} месяца — {{ t.price_rub|rub }}, выгоднее на {{ t.saving|rub }}{% endfor %}</p>
+{% endblock %}

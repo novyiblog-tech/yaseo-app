@@ -15,9 +15,11 @@ from email.utils import formataddr, make_msgid
 from pathlib import Path
 
 import psycopg
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 MAX_ATTEMPTS = 5
 DEV_DIR = Path(__file__).resolve().parents[2] / "build" / "outbox"
+TEMPLATES = Path(__file__).parent / "templates"
 
 
 def queue(conn: psycopg.Connection, user: dict, subject: str, html: str, text: str,
@@ -28,6 +30,29 @@ def queue(conn: psycopg.Connection, user: dict, subject: str, html: str, text: s
         (user["id"], user["email"], subject, html, text, kind, dedupe_key),
     ).fetchone()
     return row["id"] if row else None
+
+
+def base_url() -> str:
+    return os.environ.get("YASEO_BASE_URL", "http://127.0.0.1:8000")
+
+
+def render(name: str, **ctx) -> tuple[str, str]:
+    """Письмо из пары шаблонов email/<name>.html.j2 и .txt.j2: HTML и простой текст."""
+    from yaseo_app import billing
+    env = Environment(loader=FileSystemLoader(TEMPLATES),
+                      autoescape=select_autoescape(["html", "j2"]))
+    env.filters["rub"] = billing.money
+    env.filters["date"] = lambda d: d.astimezone().strftime("%d.%m.%Y") if d else "—"
+    ctx.setdefault("base", base_url())
+    return (env.get_template(f"email/{name}.html.j2").render(**ctx),
+            env.get_template(f"email/{name}.txt.j2").render(**ctx))
+
+
+def notify(conn: psycopg.Connection, user: dict, subject: str, name: str, kind: str,
+           dedupe_key: str | None = None, **ctx) -> int | None:
+    """Поставить письмо по шаблону. С тем же ключом второе не встанет."""
+    html, text = render(name, user=user, **ctx)
+    return queue(conn, user, subject, html, text, kind, dedupe_key)
 
 
 def _secret() -> bytes:

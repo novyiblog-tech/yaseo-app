@@ -1,4 +1,5 @@
 {% extends "cabinet/base.html.j2" %}
+{% from "plan_features.html.j2" import features, price %}
 {% block title %}Тариф{% endblock %}
 {% block main %}
 {% set p = cur.plan %}
@@ -9,75 +10,80 @@
     {% elif limit == 0 %}<div class="muted small">не входит в тариф</div>{% endif %}
   </div>
 {% endmacro %}
+{% macro term_label(m) %}{{ 'Месяц' if m == 1 else m ~ ' ' ~ m|plural('месяц', 'месяца', 'месяцев') }}{% endmacro %}
 <div class="stack">
   <h1>Тариф и оплата</h1>
   {% if fake %}<div class="note fake">Тестовый режим: оплата виртуальная, деньги не списываются.</div>{% endif %}
   {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="note" role="status">{{ notice }}</div>{% endif %}
 
   <section class="card">
-    <div class="row" style="justify-content:space-between;align-items:flex-start">
-      <div>
-        <div class="muted small">Сейчас</div>
-        <h2 style="margin:4px 0 6px">{{ p.title }}</h2>
-        <p class="muted small">
-        {% if p.period == 'free' %}{% if p.audits_per_period == 1 %}Одна проверка{% else %}{{ p.audits_per_period }} {{ p.audits_per_period|plural('проверка', 'проверки', 'проверок') }}{% endif %} за {{ p.free_every_days }} дней, {% if p.steps_shown %}первые {{ p.steps_shown }} {{ p.steps_shown|plural('шаг', 'шага', 'шагов') }} плана исправлений{% else %}полный план исправлений{% endif %}{% if p.pdf %} и PDF отчёта{% endif %}.{% if cur.sub and cur.end %} Действует до {{ cur.end|dt }}.{% endif %}
-        {% elif cur.sub.status == 'past_due' %}Не удалось списать оплату. Повторим в течение трёх дней, потом тариф станет бесплатным.
-        {% elif p.period == 'once' %}Действует до {{ cur.end|dt }}, без продления.
-        {% elif cur.sub.auto_renew %}Продлится {{ cur.end|dt }} на {{ p.price_rub|rub }}.
-        {% else %}Действует до {{ cur.end|dt }}, продление выключено.{% endif %}
-        </p>
-      </div>
-      {% if p.period == 'month' %}
-      <form method="post" action="/billing/auto-renew">
-        <input type="hidden" name="csrf" value="{{ user.csrf }}">
-        <input type="hidden" name="on" value="{{ 'no' if cur.sub.auto_renew else 'yes' }}">
-        <button class="btn ghost" type="submit">{{ 'Выключить продление' if cur.sub.auto_renew else 'Включить продление' }}</button>
-      </form>
-      {% endif %}
-    </div>
+    <div class="muted small">Сейчас</div>
+    <h2 style="margin:4px 0 6px">{{ p.title }}</h2>
+    <p class="muted small">
+    {% if p.period == 'free' %}{% if p.audits_per_period == 1 %}Одна проверка{% else %}{{ p.audits_per_period }} {{ p.audits_per_period|plural('проверка', 'проверки', 'проверок') }}{% endif %} за {{ p.free_every_days }} дней, {% if p.steps_shown %}первые {{ p.steps_shown }} {{ p.steps_shown|plural('шаг', 'шага', 'шагов') }} плана исправлений{% else %}полный план исправлений{% endif %}{% if p.pdf %} и PDF отчёта{% endif %}.{% if cur.sub and cur.end %} Действует до {{ cur.end|dt }}.{% endif %}
+    {% elif cur.sub.status == 'past_due' %}Не удалось списать оплату за продление. Повторим в течение трёх дней, потом тариф станет бесплатным.
+    {% elif p.period == 'once' %}Действует до {{ cur.end|dt }}, без продления.
+    {% elif cur.sub.auto_renew %}Продлится автоматически {{ cur.end|dt }}. Выключить — в <a href="/settings#renew">настройках</a>.
+    {% else %}Действует до {{ cur.end|dt }}. Сам не продлится — напомним письмом за 3 дня.{% endif %}
+    {% if p.period == 'month' and cur.sub.months > 1 %}Оплачено на {{ cur.sub.months }} {{ cur.sub.months|plural('месяц', 'месяца', 'месяцев') }}: лимиты обновляются каждые 30 дней, следующее обновление {{ (cur.start + period)|dt }}.{% endif %}
+    </p>
     <div class="meters">
       {{ meter('Сайты', use.sites, p.sites) }}
-      {{ meter('Проверки за период', use.audits, p.audits_per_period) }}
-      {{ meter('Проверки в нейросетях', use.ai_checks, p.ai_checks) }}
+      {{ meter('Проверки за 30 дней', use.audits, p.audits_per_period) }}
+      {{ meter('Ответы нейросети за 30 дней', use.ai_checks, p.ai_checks) }}
     </div>
+    {% if p.code == 'free' and not user.invite_code %}
+    <form class="promo-form" method="post" action="/billing/promo">
+      <input type="hidden" name="csrf" value="{{ user.csrf }}">
+      <div class="field"><label for="promo">Промокод
+        <span class="hint">Даёт полную проверку бесплатно: фразы, место в Яндексе, нейросеть и весь план исправлений.</span></label>
+        <div class="row"><input id="promo" type="text" name="promo" placeholder="ABCD-EFGH" autocomplete="off" value="{{ promo or '' }}">
+        <button class="btn ghost" type="submit">Применить</button></div></div>
+    </form>
+    {% endif %}
   </section>
 
   <section>
     <h2>Тарифы</h2>
     <p class="plans-hint" aria-hidden="true">Листайте вбок <span>→</span></p>
+    <form method="post" action="/billing/buy">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
     <div class="plans">
       {% for t in plans %}
       <div class="plan{% if t.code == p.code %} current{% endif %}">
         <h3>{{ t.title }}</h3>
-        <div class="price">{{ t.price_rub|rub }}{% if t.period == 'month' %}<span>/мес</span>{% elif t.period == 'once' %}<span> разово</span>{% endif %}</div>
-        <ul class="plain small">
-          <li>{{ t.sites }} {{ 'сайт' if t.sites == 1 else 'сайта' if t.sites < 5 else 'сайтов' }}</li>
-          <li>{% if t.period == 'free' %}проверка раз в {{ t.free_every_days }} дней{% else %}{{ t.audits_per_period }} полн. аудит{{ '' if t.audits_per_period == 1 else 'ов' if t.audits_per_period >= 5 else 'а' }} за 30 дней{% endif %}</li>
-          {% if t.max_pages %}<li>до {{ t.max_pages }} {{ t.max_pages|plural('страницы', 'страниц', 'страниц') }} в проверке</li>{% endif %}
-          <li>до {{ t.queries_per_audit }} запросов в аудите</li>
-          <li>{% if t.ai_checks %}{{ t.ai_checks }} проверок в нейросетях{% else %}<span class="muted">без нейросетей</span>{% endif %}</li>
-          {% if t.tracked_queries %}<li>{{ t.tracked_queries }} запросов под наблюдением <span class="muted">— скоро</span></li>{% endif %}
-          <li>{% if t.pdf %}PDF отчёта{% else %}<span class="muted">без PDF</span>{% endif %}</li>
-          {% if t.white_label %}<li>свой логотип в отчёте <span class="muted">— скоро</span></li>{% endif %}
-        </ul>
-        {# у каждой карточки одно и то же место внизу: кнопка или состояние того же размера #}
+        {{ price(t) }}
+        <ul class="plain small">{{ features(t) }}</ul>
+        {# у каждой карточки одно и то же место внизу: кнопки или состояние того же размера #}
         <div class="plan-foot">
-        {% if t.code == p.code %}<span class="btn state current">✓ ваш тариф</span>
-        {% elif t.period == 'free' %}<span class="btn state">Бесплатно</span>
+        {% if t.period == 'free' %}
+          <span class="btn state{% if t.code == p.code %} current{% endif %}">{{ '✓ ваш тариф' if t.code == p.code else 'Бесплатно' }}</span>
         {% else %}
-        <form method="post" action="/billing/buy">
-          <input type="hidden" name="csrf" value="{{ user.csrf }}">
-          <input type="hidden" name="plan" value="{{ t.code }}">
-          <button class="btn" type="submit">{{ 'Купить' if t.period == 'once' else 'Подключить' }}</button>
-        </form>
+          {% set o = offers[t.code] %}
+          {% if o.refused %}
+            <span class="btn state{% if t.code == p.code %} current{% endif %}">{{ '✓ ваш тариф' if t.code == p.code else 'Позже' }}</span>
+            {% if t.code != p.code %}<p class="plan-why">{{ o.refused }}</p>{% endif %}
+          {% else %}
+            {% if t.code == p.code %}<span class="plan-state">✓ ваш тариф · продлить</span>{% endif %}
+            {% for q in o.options %}
+            <button class="btn{% if t.code == p.code or q.months > 1 %} ghost{% endif %}" type="submit" name="choice" value="{{ t.code }}:{{ q.months }}">
+              {% if t.period == 'once' %}Купить — {{ q.amount|rub }}{% else %}{{ term_label(q.months) }} — {{ q.amount|rub }}{% endif %}</button>
+            {% endfor %}
+            {% set up = o.options|selectattr('kind', 'equalto', 'upgrade')|first %}
+            {% if up and up.credit %}<p class="plan-why">Доплата с зачётом {{ up.credit|rub }} за оставшиеся дни «{{ p.title }}». Новый срок — с оплаты.</p>{% endif %}
+          {% endif %}
         {% endif %}
         </div>
       </div>
       {% endfor %}
     </div>
+    <label class="check"><input type="checkbox" name="auto_renew" value="yes">
+      <span>Продлевать автоматически: в конце срока списывать с той же карты стоимость такого же срока, пока не выключу в настройках. Без отметки тариф сам не продлится — напомним письмом за 3 дня.</span></label>
+    </form>
   </section>
 
-  <p class="muted small">Нажимая «Купить» или «Подключить», вы принимаете <a href="/legal/offer">оферту</a>. Ежемесячный тариф продлевается автоматически с той же карты — отключить продление можно здесь в любой момент, доступ сохранится до конца оплаченного периода.</p>
+  <p class="muted small">Нажимая кнопку с ценой, вы принимаете <a href="/legal/offer">оферту</a>. Месяц — 30 дней с оплаты. Продление добавляет срок к текущему. Тариф выше можно взять в любой момент — неиспользованные полные дни текущего засчитаем; тариф ниже — когда закончится текущий.</p>
 
   {% if payments %}
   <section class="card table-scroll">
@@ -85,8 +91,8 @@
     <table>
       <thead><tr><th>Дата</th><th>Тариф</th><th>За что</th><th>Статус</th><th class="num">Сумма</th></tr></thead>
       <tbody>{% for x in payments %}
-        <tr><td class="muted">{{ x.created_at|dt }}</td><td>{{ x.title }}</td>
-          <td class="muted">{{ 'продление' if x.purpose == 'renewal' else 'покупка' }}</td>
+        <tr><td class="muted">{{ x.created_at|dt }}</td><td>{{ x.title }}{% if x.months > 1 %}, {{ x.months }} мес.{% endif %}</td>
+          <td class="muted">{{ {'renewal': 'продление', 'upgrade': 'переход с зачётом ' ~ (x.credit_rub|rub)}.get(x.purpose, 'покупка') }}</td>
           <td><span class="pill {{ {'succeeded': 'ok', 'pending': 'queued', 'canceled': 'failed'}[x.status] }}">{{ {'succeeded': 'оплачен', 'pending': 'ждёт оплаты', 'canceled': 'не прошёл'}[x.status] }}</span></td>
           <td class="num">{{ x.amount_rub|rub }}</td></tr>
       {% endfor %}</tbody>

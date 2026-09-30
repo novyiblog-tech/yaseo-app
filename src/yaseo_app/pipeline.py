@@ -15,7 +15,7 @@ from yaseo_app import free_audit, sources
 from yaseo_app.ledger import Blocked, Meter, RateLimited
 
 SCHEMA = 2
-MAX_QUERIES = 30
+MAX_QUERIES = 50  # «Ультра» — 50 фраз в проверке
 SERP_DEPTH = 10
 RUSSIA = 225
 # Подряд столько отказов поставщика — раздел останавливается: скорее всего ключ

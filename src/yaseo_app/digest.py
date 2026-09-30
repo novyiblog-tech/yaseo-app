@@ -12,7 +12,7 @@ from pathlib import Path
 import psycopg
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from yaseo_app import history, mailer, monitor
+from yaseo_app import billing, history, mailer, monitor
 
 HERE = Path(__file__).parent
 TLS_WARN_DAYS = 21
@@ -79,10 +79,13 @@ def render(user: dict, data: dict) -> tuple[str, str, str]:
 
 
 def queue_weekly(conn: psycopg.Connection, today: date) -> int:
-    """Поставить письма недели всем, кто их не отключил. Повтор в ту же неделю — ничего."""
+    """Поставить письма недели всем, кто их не отключил и у кого они в тарифе.
+    Повтор в ту же неделю — ничего."""
     year, week, _ = today.isocalendar()
     n = 0
     for user in conn.execute("SELECT * FROM users WHERE weekly_digest AND email_confirmed_at IS NOT NULL").fetchall():
+        if not billing.current(conn, user)["plan"]["weekly_digest"]:
+            continue
         data = build(conn, user, today)
         if data is None:
             continue

@@ -5,7 +5,7 @@
 <div class="auth card">
   {% if payment.status == 'succeeded' %}
     <h1>Оплачено</h1>
-    <p class="muted" style="margin-top:10px">Тариф «{{ plan.title }}» подключён. Спасибо!</p>
+    <p class="muted" style="margin-top:10px">Тариф «{{ plan.title }}» {{ 'продлён' if payment.purpose == 'renewal' else 'подключён' }}{% if sub %} до {{ sub.period_end|dt }}{% endif %}. Спасибо!</p>
     <p style="margin-top:18px"><a class="btn" href="/sites">К сайтам</a></p>
   {% elif payment.status == 'canceled' %}
     <h1>Оплата не прошла</h1>

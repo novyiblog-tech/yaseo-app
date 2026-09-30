@@ -24,7 +24,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import subprocess
 import tempfile
 
-from yaseo_app import accounts, beta, billing, db, legal, history, mailer, monitor, report, score, verify
+from yaseo_app import accounts, billing, db, legal, history, mailer, monitor, report, score, verify
+from yaseo_app import promo as promos
 from yaseo_app.accounts import Refused
 
 HERE = Path(__file__).parent
@@ -187,21 +188,21 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         return landing_page(request, c)
 
     @app.get("/signup")
-    def signup_form(request: Request, invite: str = "", site: str = ""):
-        return page(request, "cabinet/signup.html.j2", invite=invite, site=site,
-                    beta_on=beta.enabled())
+    def signup_form(request: Request, promo: str = "", invite: str = "", site: str = ""):
+        # invite — ссылки из писем времён беты
+        return page(request, "cabinet/signup.html.j2", promo=promo or invite, site=site)
 
     @app.post("/signup")
     def signup(request: Request, email: str = Form(""), password: str = Form(""),
-               consent: str = Form(""), offer: str = Form(""), invite: str = Form(""),
+               consent: str = Form(""), offer: str = Form(""), promo: str = Form(""),
                site: str = Form(""), c=Depends(conn)):
         try:
             user = accounts.signup(c, email, password, consent == "yes",
-                                   ip=client_ip(request), invite=invite or None,
+                                   ip=client_ip(request), promo=promo or None,
                                    offer=offer == "yes")
         except Refused as exc:
             return page(request, "cabinet/signup.html.j2", error=str(exc), email=email,
-                        invite=invite, site=site, beta_on=beta.enabled(), status=400)
+                        promo=promo, site=site, status=400)
         target = "/sites"
         if site.strip():
             # Адрес, введённый на лендинге, сразу становится сайтом в кабинете.
@@ -217,19 +218,10 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
     # --- лендинг --------------------------------------------------------------------
 
     def landing_page(request, c, status=200, **ctx):
-        return page(request, "landing/index.html.j2", status=status, beta_on=beta.enabled(),
+        return page(request, "landing/index.html.j2", status=status,
                     plans=billing.plans(c), vat_note=legal.requisites()["vat_note"],
+                    promo_plan=billing.plan(c, "promo"),
                     request_base=str(request.base_url).rstrip("/"), **ctx)
-
-    @app.post("/waitlist")
-    def waitlist(request: Request, email: str = Form(""), site: str = Form(""),
-                 consent: str = Form(""), c=Depends(conn)):
-        try:
-            beta.join_waitlist(c, email, site, consent == "yes", source="лендинг")
-        except Refused as exc:
-            return landing_page(request, c, status=400, wl_error=str(exc), wl_email=email,
-                                wl_site=site)
-        return page(request, "landing/thanks.html.j2")
 
     @app.get("/example")
     def example():
@@ -388,9 +380,23 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         monitor.remove_query(c, user, query_id)
         return RedirectResponse(f"/sites/{site_id}#positions", status_code=303)
 
+    def settings_page(request, c, user, status=200, **extra):
+        return page(request, "cabinet/settings.html.j2", user, status=status, dev=allow_private,
+                    cur=billing.current(c, user), **extra)
+
     @app.get("/settings")
-    def settings(request: Request, user=Depends(current)):
-        return page(request, "cabinet/settings.html.j2", user, dev=allow_private)
+    def settings(request: Request, user=Depends(current), c=Depends(conn)):
+        return settings_page(request, c, user)
+
+    @app.post("/settings/renew")
+    def settings_renew(request: Request, on: str = Form(""), consent: str = Form(""),
+                       csrf: str = Form(""), user=Depends(current), c=Depends(conn)):
+        check_csrf(user, csrf)
+        try:
+            billing.set_auto_renew(c, user, on == "yes", consent=consent == "yes")
+        except Refused as exc:
+            return settings_page(request, c, user, status=400, renew_error=str(exc))
+        return RedirectResponse("/settings#renew", status_code=303)
 
     @app.post("/settings")
     def settings_save(weekly_digest: str = Form(""), csrf: str = Form(""),
@@ -511,27 +517,44 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
 
     # --- тариф и оплата -----------------------------------------------------------
 
-    def billing_page(request, c, user, status=200, error=None):
+    def billing_page(request, c, user, status=200, error=None, **extra):
         cur = billing.current(c, user)
         return page(request, "cabinet/billing.html.j2", user, status=status, error=error,
                     cur=cur, use=billing.usage(c, user, cur), plans=billing.plans(c),
+                    offers=billing.offers(c, user), period=billing.PERIOD,
                     payments=billing.payment_history(c, user),
-                    fake=isinstance(billing.provider(c), billing.FakeProvider))
+                    fake=isinstance(billing.provider(c), billing.FakeProvider), **extra)
 
     @app.get("/billing")
     def billing_view(request: Request, user=Depends(current), c=Depends(conn)):
         return billing_page(request, c, user)
 
     @app.post("/billing/buy")
-    def buy(request: Request, plan: str = Form(""), csrf: str = Form(""),
+    def buy(request: Request, choice: str = Form(""), plan: str = Form(""),
+            months: int = Form(1), auto_renew: str = Form(""), csrf: str = Form(""),
             user=Depends(current), c=Depends(conn)):
         check_csrf(user, csrf)
+        if choice:  # кнопка карточки: «тариф:месяцев»
+            plan, _, m = choice.partition(":")
+            months = int(m) if m.isdigit() else 1
         try:
             url = billing.start_purchase(c, user, plan, billing.provider(c),
-                                         str(request.base_url) + "billing/return?payment={payment}")
+                                         str(request.base_url) + "billing/return?payment={payment}",
+                                         months=months, auto_renew=auto_renew == "yes")
         except Refused as exc:
             return billing_page(request, c, user, status=400, error=str(exc))
         return RedirectResponse(url, status_code=303)
+
+    @app.post("/billing/promo")
+    def apply_promo(request: Request, promo: str = Form(""), csrf: str = Form(""),
+                    user=Depends(current), c=Depends(conn)):
+        check_csrf(user, csrf)
+        try:
+            got = promos.redeem_in_cabinet(c, user, promo)
+        except Refused as exc:
+            return billing_page(request, c, user, status=400, error=str(exc), promo=promo)
+        user = accounts.session_user(c, request.cookies.get(COOKIE))
+        return billing_page(request, c, user, notice=f"Промокод применён: тариф «{got['title']}».")
 
     @app.get("/billing/return")
     def pay_return(request: Request, payment: int, user=Depends(current), c=Depends(conn)):
@@ -543,14 +566,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         if row["provider_id"]:
             row = billing.confirm(c, prov, row["provider_id"]) or row
         return page(request, "cabinet/paid.html.j2", user, payment=row,
-                    plan=billing.plan(c, row["plan"]))
-
-    @app.post("/billing/auto-renew")
-    def auto_renew(request: Request, on: str = Form(""), csrf: str = Form(""),
-                   user=Depends(current), c=Depends(conn)):
-        check_csrf(user, csrf)
-        billing.set_auto_renew(c, user, on == "yes")
-        return RedirectResponse("/billing", status_code=303)
+                    plan=billing.plan(c, row["plan"]), sub=billing.subscription(c, user["id"]))
 
     @app.post("/pay/webhook/{name}")
     async def webhook(name: str, request: Request):

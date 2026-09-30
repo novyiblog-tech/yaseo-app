@@ -7,30 +7,30 @@ assumption=True — допущение без замера, в файле под
 
 SCENARIOS = ["Осторожный", "Средний", "Смелый"]
 MONTHS = 24
-TARIFFS = {"start": "Старт", "pro": "Про", "agency": "Агентство"}
+TARIFFS = {"start": "Старт", "pro": "Про", "agency": "Ультра"}
 
 WAIT = "ОЖИДАЕТ ЗАМЕРА — значение временное, поставлено для проверки формул. "
-PLAN = "docs/PLAN.md §4, тарифы версии 2 от 30.09.2026"
+PLAN = "docs/PLAN.md §4, тарифы версии 3 от 30.09.2026"
 YA = "Тарифы Yandex Search API, aistudio.yandex.ru/ru/docs/search-api/pricing, замер 29.09.2026, с НДС"
 
 PARAMS = [
     {"section": "Цены"},
-    {"key": "price_start", "name": "Старт, подписка в месяц", "values": 1990, "fmt": "rub",
+    {"key": "price_start", "name": "Старт, подписка в месяц", "values": 2990, "fmt": "rub",
      "unit": "₽", "source": PLAN + ". Назначена по ценам конкурентов, не расчётом"},
     {"key": "price_pro", "name": "Про, подписка в месяц", "values": 4990, "fmt": "rub",
      "unit": "₽", "source": PLAN},
-    {"key": "price_agency", "name": "Агентство, подписка в месяц", "values": 12900, "fmt": "rub",
+    {"key": "price_agency", "name": "Ультра, подписка в месяц", "values": 12900, "fmt": "rub",
      "unit": "₽", "source": PLAN},
     {"key": "price_one", "name": "Разовый аудит", "values": 1990, "fmt": "rub",
      "unit": "₽", "source": PLAN},
 
     {"section": "Себестоимость API Яндекса"},
-    {"key": "api_start", "name": "Старт при полной выборке лимитов", "values": 335, "fmt": "rub",
-     "unit": "₽ в месяц", "source": YA + ". 300 запросов ежедневно ночью, 2 аудита, 10 проверок в нейросетях"},
-    {"key": "api_pro", "name": "Про при полной выборке лимитов", "values": 1155, "fmt": "rub",
-     "unit": "₽ в месяц", "source": YA + ". 1 000 запросов, 5 аудитов, 50 проверок"},
-    {"key": "api_agency", "name": "Агентство при полной выборке лимитов", "values": 3858,
-     "fmt": "rub", "unit": "₽ в месяц", "source": YA + ". 3 000 запросов, 20 аудитов, 200 проверок"},
+    {"key": "api_start", "name": "Старт при полной выборке лимитов", "values": 434, "fmt": "rub",
+     "unit": "₽ в месяц", "source": YA + ". 500 фраз ежедневно ночью, 2 аудита по 20 фраз, 10 ответов нейросети"},
+    {"key": "api_pro", "name": "Про при полной выборке лимитов", "values": 1405, "fmt": "rub",
+     "unit": "₽ в месяц", "source": YA + ". 1 500 фраз, 5 аудитов по 30 фраз, 50 ответов"},
+    {"key": "api_agency", "name": "Ультра при полной выборке лимитов", "values": 3099,
+     "fmt": "rub", "unit": "₽ в месяц", "source": YA + ". 3 000 фраз, 20 аудитов по 50 фраз, 150 ответов"},
     {"key": "api_audit", "name": "Один полный аудит", "values": 27.77, "fmt": "rub2",
      "unit": "₽", "source": YA + ". 30 запросов выдачи, 60 Wordstat, 5 по регионам, 5 генеративных"},
     {"key": "api_express", "name": "Одна бесплатная экспресс-проверка", "values": 0.4,
@@ -48,7 +48,7 @@ PARAMS = [
      "unit": "шт.", "source": PLAN},
     {"key": "audits_pro", "name": "Про: полных аудитов в месяц", "values": 5, "fmt": "num",
      "unit": "шт.", "source": PLAN},
-    {"key": "audits_agency", "name": "Агентство: полных аудитов в месяц", "values": 20,
+    {"key": "audits_agency", "name": "Ультра: полных аудитов в месяц", "values": 20,
      "fmt": "num", "unit": "шт.", "source": PLAN},
 
     {"section": "Платежи и налоги"},
@@ -109,6 +109,6 @@ PARAMS = [
      "unit": "доля", "assumption": True, "source": "Допущение"},
     {"key": "mix_pro", "name": "Про", "values": [0.17, 0.24, 0.30], "fmt": "pct",
      "unit": "доля", "assumption": True, "source": "Допущение"},
-    {"key": "mix_agency", "name": "Агентство", "values": [0.03, 0.06, 0.10], "fmt": "pct",
+    {"key": "mix_agency", "name": "Ультра", "values": [0.03, 0.06, 0.10], "fmt": "pct",
      "unit": "доля", "assumption": True, "source": "Допущение"},
 ]

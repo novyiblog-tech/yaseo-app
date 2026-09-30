@@ -1,0 +1,8 @@
+{% extends "email/base.html.j2" %}
+{% set button_url = link %}{% set button_text = "Зарегистрироваться" %}
+{% block title %}yaseo открылся{% endblock %}
+{% block body %}
+  <p style="font-size:15px;line-height:1.5;margin:0 0 16px;">Вы оставляли почту, чтобы проверить сайт в yaseo. Регистрация открыта, а для вас — промокод на полную проверку: 30 страниц, спрос и место в Яндексе по 5 фразам, ответы нейросети и полный план исправлений.</p>
+  <p style="font-size:24px;font-weight:800;letter-spacing:2px;margin:0 0 20px;">{{ code }}</p>
+{% endblock %}
+{% block foot %}<p style="font-size:13px;color:#8a8a8a;margin:20px 0 0;">Код одноразовый и действует 60 дней. Если вы не оставляли почту на yaseo — просто удалите письмо.</p>{% endblock %}

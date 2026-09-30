@@ -11,6 +11,27 @@
       <span>Раз в неделю присылать, что изменилось: позиции, новые проверки, срок сертификата. Если ничего не изменилось — письма не будет.</span></label>
     <p style="margin-top:18px"><button class="btn" type="submit">Сохранить</button></p>
   </form>
+
+  <section class="card" id="renew">
+    <h2>Продление тарифа</h2>
+    {% set sub = cur.sub %}
+    {% if cur.plan.period != 'month' %}
+      <p class="muted small">Автопродление — для тарифов на месяц и на 3 месяца. Сейчас у вас «{{ cur.plan.title }}».</p>
+    {% elif sub.auto_renew %}
+      <p class="muted small">Включено: {{ cur.end|dt }} спишем стоимость такого же срока с сохранённой карты. За 3 дня пришлём письмо.</p>
+      <form method="post" action="/settings/renew" style="margin-top:14px">
+        <input type="hidden" name="csrf" value="{{ user.csrf }}"><input type="hidden" name="on" value="no">
+        <button class="btn ghost" type="submit">Выключить автопродление</button></form>
+    {% else %}
+      <p class="muted small">Выключено: тариф действует до {{ cur.end|dt }} и сам не продлится. За 3 дня и в день окончания пришлём письмо.</p>
+      <form method="post" action="/settings/renew" style="margin-top:6px">
+        <input type="hidden" name="csrf" value="{{ user.csrf }}"><input type="hidden" name="on" value="yes">
+        <label class="check"><input type="checkbox" name="consent" value="yes" required>
+          <span>Согласен: в конце каждого срока с сохранённой карты списывается стоимость такого же срока тарифа «{{ cur.plan.title }}», пока я не выключу продление здесь.</span></label>
+        <p style="margin-top:14px"><button class="btn ghost" type="submit">Включить автопродление</button></p></form>
+    {% endif %}
+    {% if renew_error %}<div class="error" role="alert">{{ renew_error }}</div>{% endif %}
+  </section>
   {% if dev %}<p class="muted small">Машина разработчика: <a href="/dev/outbox">письма, которые ушли бы вам</a>.</p>{% endif %}
 </div>
 {% endblock %}

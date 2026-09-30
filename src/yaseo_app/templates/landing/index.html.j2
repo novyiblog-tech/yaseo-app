@@ -1,4 +1,5 @@
 {% extends "cabinet/base.html.j2" %}
+{% from "plan_features.html.j2" import features, price %}
 {% block title %}Проверка сайта: Яндекс и нейросети{% endblock %}
 {% block head %}
 <meta name="description" content="Проверка сайта по адресу: оценка из 100, три светофора — техника, Яндекс, нейросети — и 5–7 шагов простым языком: что исправить, кто это делает и сколько времени займёт.">
@@ -15,28 +16,11 @@
     <p class="l-kick">01 / 06</p>
     <h1 class="l-title">Что Яндекс и&nbsp;нейросети <span class="acc">видят на&nbsp;вашем сайте</span></h1>
     <p class="l-lead">Проверка по адресу сайта: <span class="u">оценка из&nbsp;100</span>, три светофора и&nbsp;<span class="u">5–7&nbsp;шагов простым языком</span> — что исправить, кто это делает и&nbsp;сколько времени займёт.</p>
-    {% if beta_on %}
-    <div class="l-cta" id="waitlist">
-      <form class="card" method="post" action="/waitlist">
-        <p class="l-badge">Закрытая бета</p>
-        <div class="field"><label for="wl-site">Сайт</label>
-          <input id="wl-site" type="text" name="site" value="{{ wl_site or '' }}" placeholder="example.ru"></div>
-        <div class="field"><label for="wl-email">Почта — пришлём приглашение</label>
-          <input id="wl-email" type="email" name="email" value="{{ wl_email or '' }}" autocomplete="email" required></div>
-        <label class="check"><input type="checkbox" name="consent" value="yes" required>
-          <span>Даю согласие на обработку почты, чтобы получить приглашение.</span></label>
-        <p style="margin-top:18px"><button class="btn" type="submit">Оставить заявку</button></p>
-        {% if wl_error %}<div class="error" role="alert">{{ wl_error }}</div>{% endif %}
-        <p class="muted small" style="margin-top:14px">Есть код приглашения? <a href="/signup">Зарегистрироваться</a></p>
-      </form>
-    </div>
-    {% else %}
     <form class="l-check" method="get" action="/signup">
       <label class="sr-only" for="site">Адрес сайта</label>
       <input id="site" type="text" name="site" placeholder="адрес вашего сайта" required>
       <button class="btn" type="submit">Проверить бесплатно <span aria-hidden="true">→</span></button>
     </form>
-    {% endif %}
     <p class="l-end">Без доступа к&nbsp;сайту.<br><b>Без установки кода.</b></p>
   </div>
 
@@ -88,7 +72,7 @@
   <h2 class="l-h2">Как это <span class="acc">работает</span></h2>
   <div class="l-grid3">
     <div><span class="l-num">01</span><h3>Введите адрес</h3><p class="muted">И запросы, по которым вас ищут, — если хотите видеть спрос и позиции.</p></div>
-    <div><span class="l-num">02</span><h3>Пара минут</h3><p class="muted">Обходим от 30 до 200 страниц — в зависимости от тарифа — так, как их видит поисковый робот, и собираем данные поиска.</p></div>
+    <div><span class="l-num">02</span><h3>Пара минут</h3><p class="muted">Обходим от 10 до 150 страниц — в зависимости от тарифа — так, как их видит поисковый робот, и собираем данные поиска.</p></div>
     <div><span class="l-num">03</span><h3>Отчёт и наблюдение</h3><p class="muted">Отчёт на экране и в PDF. Дальше — позиции каждую ночь и письмо раз в неделю о том, что изменилось.</p></div>
   </div>
 </section>
@@ -100,17 +84,12 @@
   <div class="plans">
     {% for t in plans %}
     <div class="plan"><h3>{{ t.title }}</h3>
-      <div class="price">{{ t.price_rub|rub }}{% if t.period == 'month' %}<span>/мес</span>{% elif t.period == 'once' %}<span> разово</span>{% endif %}</div>
-      <ul class="plain small"><li>{{ t.sites }} {{ 'сайт' if t.sites == 1 else 'сайта' if t.sites < 5 else 'сайтов' }}</li>
-        <li>{% if t.period == 'free' %}проверка раз в {{ t.free_every_days }} дней{% else %}{{ t.audits_per_period }} {{ 'полный аудит' if t.audits_per_period == 1 else 'полных аудита' if t.audits_per_period < 5 else 'полных аудитов' }} за 30 дней{% endif %}</li>
-        {% if t.max_pages %}<li>до {{ t.max_pages }} {{ t.max_pages|plural('страницы', 'страниц', 'страниц') }} в проверке</li>{% endif %}
-        <li>{% if t.ai_checks %}{{ t.ai_checks }} проверок в нейросетях{% else %}без нейросетей{% endif %}</li>
-        {% if t.tracked_queries %}<li>{{ t.tracked_queries }} запросов под наблюдением</li>{% endif %}
-        <li>{% if t.pdf %}PDF отчёта{% else %}отчёт на экране{% endif %}</li></ul></div>
+      {{ price(t) }}
+      <ul class="plain small">{{ features(t) }}</ul></div>
     {% endfor %}
   </div>
-  <p class="muted small" style="margin-top:14px">Цены в рублях{% if vat_note %}, {{ vat_note }}{% endif %}. Подписка продлевается автоматически, отключить можно в любой момент. Условия — в <a href="/legal/offer">оферте</a>.</p>
-  {% if beta_on %}<p class="note" style="margin-top:12px">Участники закрытой беты получают тариф «Бета»: 3 проверки за 30 дней, полный план исправлений и PDF отчёта — бесплатно.</p>{% endif %}
+  <p class="muted small" style="margin-top:14px">Цены в рублях{% if vat_note %}, {{ vat_note }}{% endif %}. Месяц — 30 дней с оплаты. Тариф сам не продлевается: напомним письмом за 3 дня, автопродление — только если включите его сами. Условия — в <a href="/legal/offer">оферте</a>.</p>
+  <p class="note" style="margin-top:12px">Есть промокод? Он даёт полную проверку бесплатно: до {{ promo_plan.max_pages }} страниц, {{ promo_plan.queries_per_audit }} {{ promo_plan.queries_per_audit|plural('фраза', 'фразы', 'фраз') }} со спросом и местом в Яндексе, {{ promo_plan.ai_checks }} {{ promo_plan.ai_checks|plural('ответ', 'ответа', 'ответов') }} нейросети и весь план исправлений. Введите его при регистрации.</p>
 </section>
 
 <section class="l-section l-faq">
@@ -132,15 +111,11 @@
   <div class="l-final-body">
     <h2 class="l-h2">Проверьте <span class="acc">свой сайт</span></h2>
     <p class="l-lead">Оценка из&nbsp;100 и&nbsp;план исправлений — за&nbsp;пару минут, без доступа к&nbsp;сайту.</p>
-    {% if beta_on %}
-    <p style="margin-top:28px"><a class="btn" href="#waitlist">Оставить заявку <span aria-hidden="true">→</span></a></p>
-    {% else %}
     <form class="l-check" method="get" action="/signup">
       <label class="sr-only" for="site-final">Адрес сайта</label>
       <input id="site-final" type="text" name="site" placeholder="адрес вашего сайта" required>
       <button class="btn" type="submit">Проверить бесплатно <span aria-hidden="true">→</span></button>
     </form>
-    {% endif %}
   </div>
   <img class="l-final-rock" src="{{ 'rock-wide.webp'|img }}" alt="" width="1600" height="900" loading="lazy">
 </section>

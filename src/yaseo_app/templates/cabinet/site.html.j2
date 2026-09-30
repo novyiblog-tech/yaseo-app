@@ -9,10 +9,14 @@
   <form class="card" method="post" action="/sites/{{ site.id }}/run">
     <input type="hidden" name="csrf" value="{{ user.csrf }}">
     <h2>Новая проверка</h2>
+    {% if plan.queries_per_audit %}
     <div class="field"><label for="queries">Что клиенты пишут в Яндексе, когда ищут ваши услуги
-      <span class="hint">Каждая фраза — с новой строки. На вашем тарифе — до {{ plan.queries_per_audit or 30 }}.</span></label>
+      <span class="hint">Каждая фраза — с новой строки. На вашем тарифе — до {{ plan.queries_per_audit }}.</span></label>
       <textarea id="queries" name="queries" placeholder="ремонт квартир в краснодаре&#10;дизайн интерьера">{{ queries or '' }}</textarea></div>
     <p class="muted small" style="margin-top:8px">Можно оставить пустым — тогда проверим только сайт: ошибки и готовность к нейросетям. С фразами покажем ещё, сколько людей их ищет, на каком месте вы в Яндексе и упоминает ли вас нейросеть Яндекса.</p>
+    {% else %}
+    <p class="muted small" style="margin-top:8px">Бесплатно проверяем сайт: ошибки и готовность к нейросетям, до {{ plan.max_pages }} страниц. Спрос, место в Яндексе и ответы нейросети по вашим фразам — с <a href="/billing">промокодом</a> или на платном тарифе.</p>
+    {% endif %}
     <p style="margin-top:18px"><button class="btn" type="submit">Запустить проверку</button></p>
     {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
   </form>

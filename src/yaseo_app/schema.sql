@@ -61,7 +61,7 @@ INSERT INTO sources (name, title, enabled, price_rub, per_user_daily, service_da
      'отложенный запрос, одна страница выдачи = одно обращение; прайс 16.09.2026'),
     ('wordstat', 'Wordstat', true, 0.020, 200, 100, 100, interval '30 days',
      'квота 100 запросов в час на весь сервис; прайс 16.09.2026'),
-    ('yandex-gen', 'Генеративный ответ Яндекса', true, 5.08, 20, 300, NULL, interval '7 days',
+    ('yandex-gen', 'Генеративный ответ Яндекса', true, 5.08, 50, 1500, NULL, interval '7 days',
      'YandexGPT поверх Поиска; прайс 29.09.2026')
 ON CONFLICT (name) DO NOTHING;
 
@@ -304,3 +304,77 @@ CREATE TABLE IF NOT EXISTS waitlist (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS offer_version text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS offer_accepted_at timestamptz;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS offer_version text;
+
+-- Тарифы от 30.09.2026 — таблица «yaseo — тарифы и настройки», решение Сергея.
+-- Накатываются один раз (отметка в applied): дальше цифры правятся в базе, и выкладка
+-- их не затирает. «Бета» закрыта: строка остаётся для тех, у кого она уже есть.
+CREATE TABLE IF NOT EXISTS applied (
+    name text PRIMARY KEY,
+    at   timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS weekly_digest boolean NOT NULL DEFAULT false;
+INSERT INTO plans (code, title, price_rub, period, public, sort) VALUES
+    ('promo', 'По промокоду', 0, 'free', false, 0)
+ON CONFLICT (code) DO NOTHING;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM applied WHERE name = 'plans-2026-09-30') THEN
+        UPDATE plans p SET title = v.title, price_rub = v.price, period = v.period,
+               public = v.public, sort = v.sort, sites = v.sites,
+               audits_per_period = v.audits, queries_per_audit = v.queries,
+               ai_checks = v.ai, tracked_queries = v.tracked, free_every_days = v.every,
+               steps_shown = v.steps, pdf = v.pdf, white_label = v.wl,
+               max_pages = v.pages, weekly_digest = v.digest
+          FROM (VALUES
+            ('free',   'Проверка',      0,     'free',  true,  0, 1,  1,  0,  0,   0,    30,   3,    false, false, 10,  false),
+            ('promo',  'По промокоду',  0,     'free',  false, 0, 1,  1,  5,  3,   0,    30,   NULL, false, false, 30,  false),
+            ('once',   'Разовый аудит', 1990,  'once',  true,  1, 1,  1,  10, 5,   0,    NULL, NULL, true,  false, 50,  false),
+            ('start',  'Старт',         2990,  'month', true,  2, 2,  2,  20, 10,  500,  NULL, NULL, true,  false, 50,  true),
+            ('pro',    'Про',           4990,  'month', true,  3, 5,  5,  30, 50,  1500, NULL, NULL, true,  true,  100, true),
+            ('agency', 'Ультра',        12900, 'month', true,  4, 15, 20, 50, 150, 3000, NULL, NULL, true,  true,  150, true)
+          ) AS v(code, title, price, period, public, sort, sites, audits, queries, ai, tracked,
+                 every, steps, pdf, wl, pages, digest)
+         WHERE p.code = v.code;
+        UPDATE plans SET public = false WHERE code = 'beta';
+        INSERT INTO applied (name) VALUES ('plans-2026-09-30');
+    END IF;
+END $$;
+
+-- Потолки нейросети под новые тарифы: проверка на «Ультра» — до 50 ответов за раз,
+-- на весь сервис — 1 500 ₽ в сутки (Сергей, 30.09.2026). Ручные правки не трогаем.
+UPDATE sources SET per_user_daily = 50 WHERE name = 'yandex-gen' AND per_user_daily = 20;
+UPDATE sources SET service_daily_rub = 1500
+    WHERE name = 'yandex-gen' AND service_daily_rub = 300;
+
+-- Сроки и продление (Сергей, 30.09.2026). Тариф оплачивается на 1 или 3 месяца
+-- (месяц — 30 дней), лимиты действуют на каждые 30 дней срока. Само срок не продлевается:
+-- письмо за 3 дня и в день окончания. Автопродление — только по отдельному согласию.
+CREATE TABLE IF NOT EXISTS plan_terms (
+    plan      text NOT NULL REFERENCES plans(code),
+    months    int NOT NULL CHECK (months > 1),
+    price_rub numeric(12, 2) NOT NULL,
+    PRIMARY KEY (plan, months)
+);
+INSERT INTO plan_terms (plan, months, price_rub) VALUES
+    ('start', 3, 7990), ('pro', 3, 13490), ('agency', 3, 34490)
+ON CONFLICT (plan, months) DO NOTHING;
+
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS months int NOT NULL DEFAULT 1;
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS auto_renew_consent_at timestamptz;
+ALTER TABLE subscriptions ALTER COLUMN auto_renew SET DEFAULT false;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS months int NOT NULL DEFAULT 1;
+-- Зачёт неиспользованных дней прошлого тарифа при переходе на тариф выше.
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS credit_rub numeric(12, 2) NOT NULL DEFAULT 0;
+-- Человек отметил при оплате «продлевать автоматически».
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS auto_renew boolean NOT NULL DEFAULT false;
+ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_purpose_check;
+ALTER TABLE payments ADD CONSTRAINT payments_purpose_check
+    CHECK (purpose IN ('purchase', 'renewal', 'upgrade'));
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM applied WHERE name = 'autorenew-off-2026-09-30') THEN
+        -- Продление было включено без отдельного согласия — выключаем.
+        UPDATE subscriptions SET auto_renew = false WHERE auto_renew_consent_at IS NULL;
+        INSERT INTO applied (name) VALUES ('autorenew-off-2026-09-30');
+    END IF;
+END $$;
