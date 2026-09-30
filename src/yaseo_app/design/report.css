@@ -10,6 +10,8 @@ body {
   font-size: var(--size-body);
   line-height: 1.5;
   font-feature-settings: "tnum";
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 a { color: inherit; }
 h1, h2 { font-family: var(--font-display); margin: 0; line-height: 1.02; letter-spacing: -0.02em; }
@@ -27,8 +29,13 @@ p { margin: 0; max-width: var(--measure); }
 
 /* шапка */
 .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 20px; border-bottom: 2px solid var(--ink); }
-/* знак — одним цветом, строчными */
-.wordmark { font-family: var(--font-display); font-weight: 900; font-size: 30px; line-height: 1; letter-spacing: -0.04em; }
+/* знак — строчными, «ya» лаймом. На светлом лайм не читается, поэтому знак на чёрной плашке */
+.wordmark { display: inline-block; padding: 7px 14px 9px; border-radius: 12px; background: var(--black); color: #fff; font-family: var(--font-display); font-weight: 900; font-size: 30px; line-height: 1; letter-spacing: -0.04em; }
+.wordmark .ya { color: var(--lime); }
+/* лаймовый акцент на отдельных словах — маркер под текстом */
+.u { background: linear-gradient(transparent 60%, var(--accent) 60%, var(--accent) 94%, transparent 94%); padding: 0 2px; }
+.back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; padding: 9px 16px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--surface); font-size: var(--size-small); font-weight: 700; text-decoration: none; }
+.back:hover { border-color: var(--ink); }
 .head .meta { text-align: right; }
 
 /* оценка */
@@ -37,6 +44,9 @@ p { margin: 0; max-width: var(--measure); }
 .score .num { font-family: var(--font-display); font-weight: 900; font-size: var(--size-hero); line-height: 0.9; letter-spacing: -0.04em; }
 .score .of { font-size: 22px; color: var(--ink-2); }
 .score .num.none { color: var(--ink-3); font-size: calc(var(--size-hero) * 0.55); }
+.score .num.green { color: var(--ok); }
+.score .num.yellow { color: var(--warn); }
+.score .num.red { color: var(--bad); }
 .lights { display: grid; gap: 10px; }
 .light { display: grid; grid-template-columns: 14px 1fr auto; gap: 14px; align-items: center; padding: 12px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-pill); }
 .dot { width: 14px; height: 14px; border-radius: 50%; }
@@ -58,8 +68,10 @@ section:last-of-type { border-bottom: 0; }
 /* шаги */
 .steps { display: grid; gap: 12px; }
 .step { display: grid; grid-template-columns: 52px 1fr; gap: 0 20px; padding: 22px 24px 22px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); break-inside: avoid; }
-.step .idx { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-family: var(--font-display); font-weight: 900; font-size: 22px; }
-.step .idx.critical { background: var(--bad); color: #fff; }
+/* номер шага — контурный круг цвета важности: не путается с лаймовыми номерами разделов */
+.step .idx { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--surface); border: 2.5px solid var(--none); color: var(--ink-2); font-family: var(--font-display); font-weight: 900; font-size: 22px; }
+.step .idx.critical { border-color: var(--bad); color: var(--bad); }
+.step .idx.major { border-color: var(--warn); color: #9a6b00; }
 .step h3 { margin-bottom: 6px; }
 .step .row { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 12px; }
 .step .row div { font-size: var(--size-small); }
@@ -105,6 +117,7 @@ tr.bad td { color: var(--bad); }
 
 @page { size: A4; margin: 14mm 12mm; }
 @media print {
+  .back { display: none; }
   .page { max-width: none; padding: 0; }
   .step, .light, .bot, tr { page-break-inside: avoid; }
   h2 { page-break-after: avoid; }

@@ -72,6 +72,13 @@ class Assessment:
     measured: list[str] = field(default_factory=list)
 
 
+
+def _pages(n: int) -> str:
+    n = abs(n) % 100
+    if 11 <= n <= 19 or n % 10 == 0 or n % 10 >= 5:
+        return "страниц"
+    return "страница" if n % 10 == 1 else "страницы"
+
 def color_of(score: int | None) -> str:
     if score is None:
         return "grey"
@@ -105,7 +112,7 @@ def tech_light(audit: dict) -> Light:
     ratio = _penalty(issues) / (pages * TECH_FULL_PENALTY_PER_PAGE)
     score = round(100 * max(0.0, 1.0 - ratio))
     return Light("tech", "Техника", score, color_of(score), _counts(issues),
-                 f"{pages} страниц проверено")
+                 f"проверено: {pages} {_pages(pages)}")
 
 
 def ai_light(geo: dict) -> Light:
@@ -119,7 +126,7 @@ def ai_light(geo: dict) -> Light:
     ratio = _penalty(issues) / AI_FULL_PENALTY
     score = round(100 * max(0.0, 1.0 - ratio))
     return Light("ai", "Нейросети", score, color_of(score), _counts(issues),
-                 f"{len(pages)} страниц проверено")
+                 f"проверено: {len(pages)} {_pages(len(pages))}")
 
 
 def yandex_light(result: dict) -> Light:

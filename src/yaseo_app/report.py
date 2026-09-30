@@ -33,6 +33,14 @@ def _short(url: str) -> str:
     return path if len(path) <= 60 else path[:57] + "…"
 
 
+def plural(n, one: str, few: str, many: str) -> str:
+    """1 шаг, 2 шага, 5 шагов."""
+    n = abs(int(n or 0)) % 100
+    if 11 <= n <= 19 or n % 10 == 0 or n % 10 >= 5:
+        return many
+    return one if n % 10 == 1 else few
+
+
 def _pages_word(n: int) -> str:
     n = abs(int(n)) % 100
     last = n % 10
@@ -51,6 +59,7 @@ def _env() -> Environment:
                       autoescape=select_autoescape(["html", "j2"]))
     env.filters["short"] = _short
     env.filters["pages_word"] = _pages_word
+    env.filters["plural"] = plural
     return env
 
 
@@ -75,7 +84,8 @@ def _issue_rows(result: dict) -> list[dict]:
 
 
 def render(result: dict, assessment: score.Assessment | None = None,
-           kind: str = "Бесплатная проверка", max_pages: int = 20) -> str:
+           kind: str = "Бесплатная проверка", max_pages: int = 20,
+           back_url: str | None = None) -> str:
     a = assessment or score.assess(result)
     color = score.color_of(a.total)
     collected = datetime.fromisoformat(result["collected_at"]).strftime("%d.%m.%Y %H:%M UTC")
@@ -86,6 +96,8 @@ def render(result: dict, assessment: score.Assessment | None = None,
         collected_at=collected,
         pages_crawled=result["audit"].get("pages_crawled", 0),
         total=a.total,
+        color=color,
+        back_url=back_url,
         verdict_text=VERDICTS[color],
         lights=a.lights,
         steps=a.steps,

@@ -27,13 +27,23 @@ class ReportTest(unittest.TestCase):
 
     def test_score_and_steps_rendered(self):
         a = score.assess(self.result)
-        self.assertIn(f'<div class="num">{a.total}</div>', self.html)
+        # цифра окрашена по светофору: красная оценка не должна быть чёрной
+        self.assertIn(f'<div class="num {score.color_of(a.total)}">{a.total}</div>', self.html)
         for s in a.steps:
             self.assertIn(s.title, self.html)
 
     def test_evidence_quoted_verbatim(self):
         first = self.result["audit"]["issues"][0]
         self.assertIn(first["evidence"].replace('"', "&#34;"), self.html)
+
+    def test_plural(self):
+        self.assertEqual([report.plural(n, "шаг", "шага", "шагов") for n in (1, 3, 5, 11, 21, 22)],
+                         ["шаг", "шага", "шагов", "шагов", "шаг", "шага"])
+
+    def test_back_link_only_in_cabinet_view(self):
+        self.assertNotIn('class="back"', self.html)
+        html = report.render(self.result, back_url="/jobs/7")
+        self.assertIn('href="/jobs/7"', html)
 
     def test_pages_word(self):
         self.assertEqual(report._pages_word(1), "страница")

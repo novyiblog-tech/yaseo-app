@@ -12,16 +12,17 @@
 </head>
 <body>
 <div class="page">
+{% if back_url %}<a class="back" href="{{ back_url }}">← Вернуться к проверке</a>{% endif %}
 
 <header class="head">
   <div>
-    <div class="wordmark">yaseo</div>
-    <h1 style="margin-top:14px">Проверка сайта {{ host }}</h1>
+    <div class="wordmark" aria-label="yaseo"><span class="ya">ya</span>seo</div>
+    <h1 style="margin-top:18px">Проверка сайта <span class="u">{{ host }}</span></h1>
     <p class="muted" style="margin-top:6px">{{ kind }}</p>
   </div>
   <div class="meta small muted">
     <div>Снято {{ collected_at }}</div>
-    <div>{{ pages_crawled }} страниц проверено</div>
+    <div>Проверено: {{ pages_crawled }} {{ pages_crawled|pages_word }}</div>
   </div>
 </header>
 
@@ -29,7 +30,7 @@
   <div>
     <div class="score">
       {% if total is not none %}
-      <div class="num">{{ total }}</div><div class="of">из 100</div>
+      <div class="num {{ color }}">{{ total }}</div><div class="of">из 100</div>
       {% else %}
       <div class="num none">Не измерено</div>
       {% endif %}
@@ -50,7 +51,7 @@
 <section>
   <div class="sec-head"><span class="n">01</span><h2>Что сделать первым</h2></div>
   {% if steps %}
-  <p class="muted" style="margin-bottom:20px">{{ steps|length }} шагов по убыванию важности. У каждого — что не так, что сделать, кто и сколько времени.</p>
+  <p class="muted" style="margin-bottom:20px"><span class="u">{{ steps|length }} {{ steps|length|plural('шаг', 'шага', 'шагов') }}</span> по убыванию важности. У каждого — что не так, что сделать, кто и сколько времени.</p>
   <div class="steps">
     {% for s in steps %}
     <div class="step">

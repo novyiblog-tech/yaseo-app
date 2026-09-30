@@ -10,9 +10,18 @@
 
   {% if job.status in ('queued', 'running') %}
   <div class="card">
-    <p>{% if job.status == 'queued' %}Проверка в очереди{% if job.error %} — {{ job.error }}{% endif %}.{% else %}Обходим сайт и собираем данные.{% endif %}
-      Страница обновится сама.</p>
+    {% if progress.queued %}
+    <p>Проверка в очереди{% if progress.ahead %} — перед ней {{ progress.ahead }} {{ progress.ahead|plural('проверка', 'проверки', 'проверок') }}{% endif %}{% if job.error %} — {{ job.error }}{% endif %}. Начнётся автоматически.</p>
     <div class="progress" aria-hidden="true"><i></i></div>
+    {% else %}
+    <div class="progress-head">
+      <p>Проверяем сайт{% if job.params.queries %} и собираем данные Яндекса{% endif %}.
+        {% if progress.over %}Почти готово, ещё немного.{% else %}Осталось примерно {{ progress.left }}.{% endif %}</p>
+      <span class="progress-pct" aria-live="polite">{{ progress.pct }}%</span>
+    </div>
+    <div class="progress known" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ progress.pct }}" style="--pct: {{ progress.pct }}%"><i></i></div>
+    {% endif %}
+    <p class="muted small" style="margin-top:12px">Страница обновляется сама. Можно закрыть её — проверка продолжится, результат будет в разделе «Мои сайты».</p>
   </div>
   {% elif job.status == 'failed' %}
   <div class="card">
@@ -30,9 +39,11 @@
       <div class="score {{ color }}">{{ a.total if a.total is not none else '—' }}</div>
       <div>
         <h2 style="margin-bottom:6px">Оценка сайта из 100</h2>
-        <p class="muted">Обошли {{ r.free.audit.pages_crawled }} стр., находок {{ r.free.audit.issues|length + (r.free.geo.issues or [])|length }}.
-          <a href="/jobs/{{ job.id }}/report" target="_blank" rel="noopener">Открыть полный отчёт →</a></p>
-        <p style="margin-top:12px">{% if plan.pdf %}<a class="btn ghost" href="/jobs/{{ job.id }}/report.pdf">Скачать PDF</a>{% else %}<span class="muted small">PDF отчёта — в <a href="/billing">платных тарифах</a>.</span>{% endif %}</p>
+        {% set pages_n = r.free.audit.pages_crawled %}{% set found_n = r.free.audit.issues|length + (r.free.geo.issues or [])|length %}
+        <p class="muted">Проверили {{ pages_n }} {{ pages_n|plural('страницу', 'страницы', 'страниц') }}, нашли {{ found_n }} {{ found_n|plural('замечание', 'замечания', 'замечаний') }}.</p>
+        <p style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+          <a class="btn" href="/jobs/{{ job.id }}/report">Открыть полный отчёт</a>
+          {% if plan.pdf %}<a class="btn ghost" href="/jobs/{{ job.id }}/report.pdf">Скачать PDF</a>{% else %}<span class="muted">PDF отчёта — в <a href="/billing">платных тарифах</a>.</span>{% endif %}</p>
       </div>
     </div>
     <div class="lights" style="margin-top:22px">
@@ -45,21 +56,22 @@
   {% set ch = r.free.checks %}
   {% if ch %}
   <section class="card">
-    <h2>Что видит робот и HTTPS</h2>
+    <h2>Открывается ли сайт поиску</h2>
+    <p class="muted small" style="margin:-6px 0 12px">Что видит поисковый робот Яндекса и работает ли защищённое соединение (HTTPS).</p>
     <ul class="plain">
       {% set v = ch.access.verdict %}
       <li><span class="dot {{ {'real': 'green', 'stub': 'red', 'down': 'red'}.get(v, 'yellow') }}"></span>
-        {{ {'real': 'Робот видит настоящий сайт', 'stub': 'Робот видит заглушку защиты вместо сайта — оценка не выставлена',
-            'empty': 'Текст страницы появляется только после скриптов', 'differs': 'Роботу сайт отдаёт меньше, чем человеку',
+        {{ {'real': 'Поиск видит сайт так же, как посетитель', 'stub': 'Вместо сайта поиск видит заглушку защиты — оценка не выставлена',
+            'empty': 'Текст страницы появляется только после загрузки скриптов — поиск может его не увидеть', 'differs': 'Поиску сайт показывает меньше текста, чем посетителю',
             'down': 'Сайт не открылся'}[v] }}
         <span class="muted small">· {{ ch.access.evidence }}</span></li>
       {% if ch.https %}
       {% set tls = ch.https.tls %}
       <li><span class="dot {{ 'green' if tls.ok else 'red' }}"></span>
-        {% if tls.ok %}Сертификат действует до {{ tls.not_after[:10] }}{% if tls.issuer %} <span class="muted small">· {{ tls.issuer }}</span>{% endif %}
-        {% elif tls.no_tls %}Сайт не открывается по https{% else %}Сертификат недействителен <span class="muted small">· {{ tls.error }}</span>{% endif %}</li>
+        {% if tls.ok %}Защищённое соединение работает, сертификат действует до {{ tls.not_after[:10] }}{% if tls.issuer %} <span class="muted small">· {{ tls.issuer }}</span>{% endif %}
+        {% elif tls.no_tls %}Сайт не открывается по защищённому адресу (https){% else %}Сертификат защищённого соединения недействителен <span class="muted small">· {{ tls.error }}</span>{% endif %}</li>
       <li><span class="dot {{ 'green' if ch.https.mirrors.main else 'yellow' }}"></span>
-        {% if ch.https.mirrors.main %}Один главный адрес: {{ ch.https.mirrors.main }}{% else %}Сайт открывается по нескольким адресам как разные сайты{% endif %}</li>
+        {% if ch.https.mirrors.main %}Один главный адрес: {{ ch.https.mirrors.main }}{% else %}Сайт открывается по нескольким адресам, и поиск считает их разными сайтами{% endif %}</li>
       {% endif %}
     </ul>
   </section>
@@ -101,19 +113,20 @@
   {% set sec = r.paid[key] %}
   <section class="card table-scroll">
     <h2>{{ SECTION_TITLES[key] }} <span class="pill {{ sec.status }}" style="vertical-align:middle">{{ SECTION_STATUS[sec.status] }}</span></h2>
+    <p class="muted small" style="margin:-6px 0 12px">{{ SECTION_HINTS[key] }}</p>
     {% if sec.reason %}<p class="muted small" style="margin-bottom:12px">{{ sec.reason }}</p>{% endif %}
     {% if sec['items'] %}
     <table>
       {% if key == 'demand' %}
-      <thead><tr><th>Запрос</th><th class="num">Показов в месяц</th></tr></thead>
+      <thead><tr><th>Фраза</th><th class="num">Ищут раз в месяц</th></tr></thead>
       <tbody>{% for it in sec['items'] %}<tr><td>{{ it.query }}</td><td class="num">{{ it.error or it.freq|num }}</td></tr>{% endfor %}</tbody>
       {% elif key == 'positions' %}
-      <thead><tr><th>Запрос</th><th class="num">Место</th><th>Первые в выдаче</th></tr></thead>
+      <thead><tr><th>Фраза</th><th class="num">Ваше место</th><th>Кто на первых местах</th></tr></thead>
       <tbody>{% for it in sec['items'] %}<tr><td>{{ it.query }}</td>
         <td class="num">{% if it.error %}ошибка{% else %}{{ it.position or 'нет в топ-10' }}{% endif %}</td>
         <td class="muted">{{ (it.top3 or [])|join(', ') }}</td></tr>{% endfor %}</tbody>
       {% else %}
-      <thead><tr><th>Запрос</th><th>Цитирует вас</th><th>Кого вместо вас</th></tr></thead>
+      <thead><tr><th>Фраза</th><th>Называет вас</th><th>Кого называет вместо вас</th></tr></thead>
       <tbody>{% for it in sec['items'] %}<tr><td>{{ it.query }}</td>
         <td>{% if it.error %}ошибка{% elif it.cited %}да, источник №{{ it.cited_position }}{% else %}нет{% endif %}</td>
         <td class="muted">{{ (it.rivals or [])|join(', ') }}</td></tr>{% endfor %}</tbody>

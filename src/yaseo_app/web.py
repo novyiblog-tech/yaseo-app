@@ -32,8 +32,13 @@ IMAGES = HERE / "design" / "img"
 COOKIE = "yaseo_session"
 PUBLIC_PATHS = {"/", "/example", "/robots.txt", "/sitemap.xml"}
 RENDER = HERE.parent.parent / "scripts" / "chrome-render.sh"
-SECTION_TITLES = {"demand": "Спрос в Wordstat", "positions": "Позиции в Яндексе",
-                  "answers": "Ответы нейросети Яндекса"}
+SECTION_TITLES = {"demand": "Сколько людей это ищут", "positions": "Ваше место в Яндексе",
+                  "answers": "Упоминает ли вас нейросеть Яндекса"}
+SECTION_HINTS = {
+    "demand": "Сколько раз в месяц эти фразы набирают в Яндексе — по данным сервиса Яндекс Вордстат.",
+    "positions": "На каком месте ваш сайт в поиске Яндекса по каждой фразе и кто стоит в самом верху.",
+    "answers": "Называет ли нейросеть Яндекса ваш сайт, когда отвечает на эти фразы, и кого называет вместо вас.",
+}
 STATUS_TITLES = {"queued": "в очереди", "running": "идёт", "done": "готово",
                  "failed": "не удалась"}
 SECTION_STATUS = {"ok": "собран", "partial": "собран частично", "skipped": "пропущен",
@@ -79,9 +84,41 @@ def _templates() -> Environment:
     env.filters["num"] = lambda v: f"{v:,}".replace(",", "\u00a0") if isinstance(v, int) else v
     env.filters["dt"] = lambda d: d.astimezone().strftime("%d.%m.%Y %H:%M") if d else "—"
     env.globals["color_of"] = score.color_of
+    env.filters["plural"] = report.plural
     env.globals.update(STATUS_TITLES=STATUS_TITLES, SECTION_TITLES=SECTION_TITLES,
+                       SECTION_HINTS=SECTION_HINTS,
                        SECTION_STATUS=SECTION_STATUS)
     return env
+
+
+def _eta_seconds(job: dict) -> float:
+    """Примерная длительность проверки: обход страниц плюс запросы к данным Яндекса.
+    По первым проверкам на боевом сервере: 31 страница и 3 виртуальных запроса — 16 с."""
+    p = job["params"]
+    pages = int(p.get("max_pages", 20))
+    queries = len(p.get("queries") or [])
+    per_query = 1 if os.environ.get("YASEO_SOURCES", "fake") == "fake" else 8
+    return 8 + 0.6 * pages + per_query * queries
+
+
+def _progress(c, job: dict) -> dict:
+    if job["status"] == "queued":
+        ahead = c.execute("SELECT count(*) AS n FROM jobs WHERE status IN ('queued', 'running')"
+                          " AND id < %s", (job["id"],)).fetchone()["n"]
+        return {"queued": True, "ahead": ahead}
+    row = c.execute("SELECT extract(epoch FROM now() - started_at) AS el FROM jobs WHERE id = %s",
+                    (job["id"],)).fetchone()
+    elapsed = float(row["el"] or 0)
+    eta = _eta_seconds(job)
+    return {"queued": False, "pct": max(3, min(95, int(elapsed / eta * 100))),
+            "left": _duration(max(0.0, eta - elapsed)), "over": elapsed > eta}
+
+
+def _duration(sec: float) -> str:
+    sec = int(round(sec))
+    if sec < 60:
+        return f"{max(5, (sec + 4) // 5 * 5)} сек"
+    return f"{(sec + 59) // 60} мин"
 
 
 def create_app(dsn: str | None = None, allow_private: bool | None = None,
@@ -329,7 +366,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         return page(request, "cabinet/site.html.j2", user, site=site, status=status,
                     jobs=accounts.site_jobs(c, site["id"]),
                     positions=monitor.site_table(c, site["id"], monitor.msk_today(c)),
-                    quota=monitor.quota(c, user), **extra)
+                    quota=monitor.quota(c, user), plan=billing.current(c, user)["plan"], **extra)
 
     @app.post("/sites/{site_id}/track")
     def track(request: Request, site_id: int, queries: str = Form(""), csrf: str = Form(""),
@@ -432,8 +469,9 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
             if prev:
                 diff = history.compare(prev["result"], job["result"])
                 diff["prev_id"] = prev["id"]
+        progress = _progress(c, job) if job["status"] in ("queued", "running") else None
         return page(request, "cabinet/job.html.j2", user, job=job, a=assessment, diff=diff,
-                    steps_shown=shown, plan=cur["plan"],
+                    steps_shown=shown, plan=cur["plan"], progress=progress,
                     color=score.color_of(assessment.total) if assessment else None)
 
     @app.get("/jobs/{job_id}/report")
@@ -449,7 +487,8 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         shown = billing.current(c, user)["plan"]["steps_shown"]
         if shown is not None:
             a.steps = a.steps[:shown]
-        return report.render(free, a, max_pages=job["params"].get("max_pages", 20))
+        return report.render(free, a, max_pages=job["params"].get("max_pages", 20),
+                             back_url=f"/jobs/{job['id']}")
 
     @app.get("/jobs/{job_id}/report.pdf")
     def job_pdf(job_id: int, user=Depends(current), c=Depends(conn)):

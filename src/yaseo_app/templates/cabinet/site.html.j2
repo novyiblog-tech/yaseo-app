@@ -9,23 +9,26 @@
   <form class="card" method="post" action="/sites/{{ site.id }}/run">
     <input type="hidden" name="csrf" value="{{ user.csrf }}">
     <h2>Новая проверка</h2>
-    <div class="field"><label for="queries">Запросы, по которым вас ищут — по одному в строке, до 30</label>
+    <div class="field"><label for="queries">Что клиенты пишут в Яндексе, когда ищут ваши услуги
+      <span class="hint">Каждая фраза — с новой строки, до {{ plan.queries_per_audit or 30 }}. Например: «ремонт квартир в краснодаре».</span></label>
       <textarea id="queries" name="queries" placeholder="ремонт квартир в краснодаре&#10;дизайн интерьера">{{ queries or '' }}</textarea></div>
-    <p class="muted small" style="margin-top:8px">Без запросов проверим только техническую часть и готовность к нейросетям. С запросами — ещё спрос, позиции и ответы нейросети Яндекса.</p>
+    <p class="muted small" style="margin-top:8px">Можно оставить пустым — тогда проверим только сайт: ошибки и готовность к нейросетям. С фразами покажем ещё, сколько людей их ищет, на каком месте вы в Яндексе и упоминает ли вас нейросеть Яндекса.</p>
     <div class="row" style="margin-top:16px">
-      <div class="field" style="margin-top:0;width:160px"><label for="max_pages">Страниц обойти</label>
+      <div class="field" style="margin-top:0;width:230px"><label for="max_pages">Сколько страниц проверить
+        <span class="hint">От 1 до 50. Чем больше, тем дольше.</span></label>
         <input id="max_pages" type="number" name="max_pages" value="20" min="1" max="50"></div>
       <button class="btn" type="submit">Запустить проверку</button>
     </div>
     {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
   </form>
   <section class="card table-scroll" id="positions">
-    <h2>Позиции под наблюдением</h2>
+    <h2>Место в Яндексе — каждый день</h2>
+    <p class="muted" style="margin-bottom:14px">Каждую ночь смотрим, на каком месте ваш сайт в поиске Яндекса по выбранным фразам, и раз в неделю присылаем письмо: что выросло, что упало.</p>
     {% if quota.limit %}
-    <p class="muted small" style="margin-bottom:14px">Снимаются каждую ночь, в Яндексе по России, глубина — первая десятка. Занято {{ quota.used }} из {{ quota.limit }} по тарифу.</p>
+    <p class="muted small" style="margin-bottom:14px">Смотрим первую десятку результатов по всей России. Фраз под наблюдением: {{ quota.used }} из {{ quota.limit }} по тарифу.</p>
     {% if positions %}
     <table>
-      <thead><tr><th>Запрос</th><th class="num">Место</th><th class="num">За неделю</th><th>30 дней</th><th></th></tr></thead>
+      <thead><tr><th>Фраза</th><th class="num">Место</th><th class="num">За неделю</th><th>30 дней</th><th></th></tr></thead>
       <tbody>{% for p in positions %}
         <tr><td>{{ p.query }}</td>
           <td class="num">{% if p.day %}{{ p.position or 'вне топ-10' }}{% else %}<span class="muted">ждёт съёма</span>{% endif %}</td>
@@ -39,13 +42,13 @@
     {% endif %}
     <form method="post" action="/sites/{{ site.id }}/track" style="margin-top:16px">
       <input type="hidden" name="csrf" value="{{ user.csrf }}">
-      <div class="field" style="margin-top:0"><label for="track">Добавить запросы — по одному в строке</label>
+      <div class="field" style="margin-top:0"><label for="track">Добавить фразы — каждую с новой строки</label>
         <textarea id="track" name="queries" style="min-height:80px">{{ track_text or '' }}</textarea></div>
       <p style="margin-top:12px"><button class="btn ghost" type="submit">Следить</button></p>
       {% if track_error %}<div class="error" role="alert">{{ track_error }}</div>{% endif %}
     </form>
     {% else %}
-    <p class="muted">Ежедневные позиции по вашим запросам и письмо раз в неделю о том, что изменилось, — в тарифах от «Старт». <a href="/billing">Тарифы</a></p>
+    <p class="muted">Доступно в тарифах от «Старт». <a href="/billing">Тарифы</a></p>
     {% endif %}
   </section>
 
@@ -53,7 +56,7 @@
     <h2>История</h2>
     {% if jobs %}
     <table>
-      <thead><tr><th>№</th><th>Статус</th><th class="num">Оценка</th><th class="num">Запросов</th><th class="num">Запущена</th><th class="num">Расход</th></tr></thead>
+      <thead><tr><th>№</th><th>Статус</th><th class="num">Оценка</th><th class="num">Фраз</th><th class="num">Запущена</th><th class="num">Расход</th></tr></thead>
       <tbody>
       {% for j in jobs %}
         <tr>

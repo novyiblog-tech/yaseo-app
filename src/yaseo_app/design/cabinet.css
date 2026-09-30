@@ -13,8 +13,11 @@ h2 { font-size: var(--size-h2); margin-bottom: 14px; }
 
 /* каркас */
 .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 24px; border-bottom: 1px solid var(--line); }
-/* знак — строчными, одним цветом */
+/* знак — строчными, «ya» лаймом, «seo» цветом текста */
 .wordmark { font-family: var(--font-display); font-weight: 900; font-size: 26px; line-height: 1; letter-spacing: -0.045em; text-decoration: none; color: var(--ink); }
+.wordmark .ya { color: var(--accent); }
+/* лаймовый акцент на отдельных словах */
+.u { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 3px; text-underline-offset: 6px; text-decoration-skip-ink: none; }
 .bar nav { display: flex; align-items: center; gap: 18px; font-size: var(--size-small); }
 .bar nav form { display: inline; }
 .wrap { max-width: var(--page-width); margin: 0 auto; padding: 40px 24px 80px; }
@@ -63,7 +66,7 @@ tr:last-child td { border-bottom: 0; }
 .score { font-family: var(--font-display); font-weight: 800; font-size: var(--size-hero); line-height: 0.85; letter-spacing: -0.06em; }
 .score.green { color: var(--accent); } .score.yellow { color: var(--warn); } .score.red { color: var(--bad); } .score.grey { color: var(--none); }
 .lights { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
-.light { padding: 16px; background: var(--surface-2); border-radius: var(--radius); }
+.light { padding: 16px; background: var(--surface-2); border: 1px solid rgba(255,255,255,0.14); border-radius: var(--radius); }
 .light b { font-family: var(--font-display); font-size: 28px; display: block; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: var(--none); }
 .dot.green { background: var(--ok); } .dot.yellow { background: var(--warn); } .dot.red { background: var(--bad); }
@@ -71,6 +74,9 @@ tr:last-child td { border-bottom: 0; }
 .steps li { list-style: none; padding: 12px 20px; background: var(--surface-2); border-radius: var(--radius-lg); }
 .progress { height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; margin-top: 18px; }
 .progress i { display: block; height: 100%; width: 40%; background: var(--accent); animation: slide 1.4s ease-in-out infinite; }
+.progress.known i { width: var(--pct); animation: none; transition: width .6s ease; }
+.progress-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+.progress-pct { font-family: var(--font-display); font-weight: 900; font-size: 34px; letter-spacing: -0.03em; color: var(--accent); }
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 @media (prefers-reduced-motion: reduce) { .progress i { animation: none; width: 100%; opacity: 0.5; } }
 
@@ -184,6 +190,7 @@ tr:last-child td { border-bottom: 0; }
 .l-faq p { color: var(--ink-2); margin-top: 10px; max-width: 70ch; }
 .l-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: var(--size-small); }
 .l-foot .wordmark { font-size: 22px; color: var(--ink-2); }
+.hint { display: block; margin-top: 2px; font-size: var(--size-small); color: var(--ink-2); font-weight: 400; text-transform: none; letter-spacing: 0; }
 @media (max-width: 860px) {
   .landing { gap: 72px; }
   .l-hero, .l-split { grid-template-columns: 1fr; gap: 36px; }
