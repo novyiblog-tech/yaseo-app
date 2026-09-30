@@ -128,12 +128,12 @@ class BetaPlanAndOfferTest(PgTestCase):
         u = self.conn.execute("SELECT * FROM users").fetchone()
         self.assertEqual(billing.current(self.conn, u)["plan"]["code"], "beta")
         site = accounts.add_site(self.conn, u, "http://shop.example", allow_private=True)
-        for _ in range(5):
+        for _ in range(3):
             jid = accounts.start_check(self.conn, u, site)
             self.conn.execute("UPDATE jobs SET status = 'done' WHERE id = %s", (jid,))
         with self.assertRaises(Refused) as ctx:
             accounts.start_check(self.conn, u, site)
-        self.assertIn("5 проверок", str(ctx.exception))
+        self.assertIn("3 проверки", str(ctx.exception))
         # окно скользящее: самая старая проверка вышла за 30 дней — можно снова
         self.conn.execute("UPDATE jobs SET created_at = now() - interval '31 days'"
                           " WHERE id = (SELECT min(id) FROM jobs)")

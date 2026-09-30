@@ -25,7 +25,7 @@ from yaseo_app.accounts import EMAIL_RE, Refused, normalize_email
 
 HERE = Path(__file__).parent
 ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-# Сергей, 30.09.2026: участники беты — на бесплатном, 5 проверок в 30 дней (тариф beta).
+# Сергей, 30.09.2026: участники беты — 3 проверки в 30 дней, все шаги и PDF (тариф beta).
 BETA_PLAN, BETA_DAYS = "beta", 90  # без 0/O и 1/I — не путаются при вводе
 
 

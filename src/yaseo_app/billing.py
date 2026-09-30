@@ -23,6 +23,7 @@ from decimal import Decimal
 import psycopg
 
 from yaseo_app import db, legal
+from yaseo_app.report import plural
 from yaseo_app.accounts import Refused
 
 PERIOD = timedelta(days=30)
@@ -119,7 +120,7 @@ def audit_allowance(conn: psycopg.Connection, user: dict, site_url: str | None =
         if p["period"] == "free":
             n = p["audits_per_period"]
             raise Refused((f"Бесплатная проверка — раз в {p['free_every_days']} дней. " if n == 1
-                           else f"По тарифу «{p['title']}» — {n} проверок за "
+                           else f"По тарифу «{p['title']}» — {n} {plural(n, 'проверка', 'проверки', 'проверок')} за "
                                 f"{p['free_every_days']} дней, они закончились. ")
                           + "Следующую можно раньше на платном тарифе.")
         raise Refused(f"Проверки по тарифу «{p['title']}» на этот период закончились.")

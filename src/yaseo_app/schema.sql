@@ -152,12 +152,12 @@ INSERT INTO plans (code, title, price_rub, period, sort, sites, audits_per_perio
     ('agency', 'Агентство',     12900, 'month', 4, 20, 20, 30, 200, 3000, NULL, NULL, true,  true)
 ON CONFLICT (code) DO NOTHING;
 
--- Тариф участников закрытой беты: лимиты бесплатного, но 5 проверок в скользящие 30 дней.
--- Сергей, 30.09.2026. Не публичный — выдаётся только кодом приглашения.
+-- Тариф участников закрытой беты: 3 проверки в скользящие 30 дней, все шаги и PDF.
+-- Сергей, 30.09.2026. В уже созданной базе строка правится UPDATE — вставка её не трогает. Не публичный — выдаётся только кодом приглашения.
 INSERT INTO plans (code, title, price_rub, period, public, sort, sites, audits_per_period,
                    queries_per_audit, ai_checks, tracked_queries, free_every_days,
                    steps_shown, pdf, white_label) VALUES
-    ('beta', 'Бета', 0, 'free', false, 0, 1, 5, 5, 0, 0, 30, 3, false, false)
+    ('beta', 'Бета', 0, 'free', false, 0, 1, 3, 5, 0, 0, 30, NULL, true, false)
 ON CONFLICT (code) DO NOTHING;
 
 -- Одна строка на пользователя: что у него сейчас. Нет строки — тариф free.
