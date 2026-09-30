@@ -10,10 +10,13 @@ set -u
 mode="${1:-}"; src="${2:-}"; out="${3:-}"; w="${4:-1280}"; h="${5:-2600}"
 [ -z "$mode" ] || [ -z "$src" ] || [ -z "$out" ] && { echo "нужны: режим, html, выход" >&2; exit 1; }
 [ -f "$src" ] || { echo "HTML не найден: $src" >&2; exit 1; }
-CHROME=""
+CHROME="${YASEO_CHROME:-}"
 for c in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-         "/Applications/Chromium.app/Contents/MacOS/Chromium"; do
-  [ -x "$c" ] && CHROME="$c" && break
+         "/Applications/Chromium.app/Contents/MacOS/Chromium" \
+         "$(command -v google-chrome-stable)" "$(command -v google-chrome)" \
+         "$(command -v chromium)" "$(command -v chromium-browser)"; do
+  [ -n "$CHROME" ] && break
+  [ -n "$c" ] && [ -x "$c" ] && CHROME="$c"
 done
 [ -n "$CHROME" ] || { echo "Chrome не найден" >&2; exit 1; }
 case "$src" in /*) abs_src="$src" ;; *) abs_src="$PWD/$src" ;; esac

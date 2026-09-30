@@ -1,0 +1,15 @@
+[Unit]
+Description=yaseo: планировщик (ночные позиции, письмо недели)
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+User=yaseo
+WorkingDirectory=/opt/yaseo-app
+EnvironmentFile=/etc/yaseo/app.env
+ExecStart=/opt/yaseo-app/.venv/bin/python -m yaseo_app.scheduler
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

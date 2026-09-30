@@ -304,7 +304,7 @@ uv run python -m yaseo_app.beta send-invites --limit 10
 
 Реквизиты — из окружения (ИП ещё не выбрано): `YASEO_OPERATOR`, `YASEO_OPERATOR_INN`,
 `YASEO_OPERATOR_OGRNIP`, `YASEO_OPERATOR_ADDRESS`, `YASEO_SUPPORT_EMAIL`,
-`YASEO_SITE_DOMAIN`, `YASEO_VAT_NOTE`. Пока хоть одного нет — страница с плашкой
+`YASEO_SITE_DOMAIN` (по умолчанию `yaseo.site`), `YASEO_VAT_NOTE`. Пока хоть одного нет — страница с плашкой
 «Черновик», а настоящий платёжный сервис не включается.
 
 Принятие фиксируется: при регистрации — отдельная галочка «принимаю оферту» (согласие на ПДн —

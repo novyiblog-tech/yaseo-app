@@ -1,0 +1,9 @@
+# Caddy сам выпускает и продлевает сертификат Let's Encrypt.
+yaseo.site {
+	encode gzip
+	reverse_proxy 127.0.0.1:8000
+}
+
+www.yaseo.site {
+	redir https://yaseo.site{uri} permanent
+}

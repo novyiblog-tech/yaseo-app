@@ -1,0 +1,7 @@
+[Unit]
+Description=yaseo: дамп базы
+
+[Service]
+Type=oneshot
+User=postgres
+ExecStart=/bin/sh -c 'pg_dump -Fc yaseo_app > /var/backups/yaseo/yaseo_app-$(date +%%F).dump && find /var/backups/yaseo -name "*.dump" -mtime +14 -delete'
