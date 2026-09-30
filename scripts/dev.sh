@@ -14,5 +14,6 @@ pids=()
 trap 'kill "${pids[@]}" 2>/dev/null' EXIT INT TERM
 uv run python -m http.server 8765 --bind 127.0.0.1 --directory tests/site >/dev/null 2>&1 & pids+=($!)
 uv run python -m yaseo_app.worker --allow-private & pids+=($!)
+uv run python -m yaseo_app.scheduler & pids+=($!)
 uv run uvicorn yaseo_app.web:app --host 127.0.0.1 --port 8000 & pids+=($!)
 wait

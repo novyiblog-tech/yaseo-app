@@ -22,7 +22,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import subprocess
 import tempfile
 
-from yaseo_app import accounts, billing, db, history, report, score
+from yaseo_app import accounts, billing, db, history, mailer, monitor, report, score
 from yaseo_app.accounts import Refused
 
 HERE = Path(__file__).parent
@@ -179,9 +179,72 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
 
     @app.get("/sites/{site_id}")
     def site_page(request: Request, site_id: int, user=Depends(current), c=Depends(conn)):
+        return site_view(request, c, user, own_site(c, user, site_id))
+
+    def site_view(request, c, user, site, status=200, **extra):
+        return page(request, "cabinet/site.html.j2", user, site=site, status=status,
+                    jobs=accounts.site_jobs(c, site["id"]),
+                    positions=monitor.site_table(c, site["id"], monitor.msk_today(c)),
+                    quota=monitor.quota(c, user), **extra)
+
+    @app.post("/sites/{site_id}/track")
+    def track(request: Request, site_id: int, queries: str = Form(""), csrf: str = Form(""),
+              user=Depends(current), c=Depends(conn)):
+        check_csrf(user, csrf)
         site = own_site(c, user, site_id)
-        return page(request, "cabinet/site.html.j2", user, site=site,
-                    jobs=accounts.site_jobs(c, site_id))
+        try:
+            monitor.add_queries(c, user, site, queries)
+        except Refused as exc:
+            return site_view(request, c, user, site, status=400, track_error=str(exc),
+                             track_text=queries)
+        return RedirectResponse(f"/sites/{site_id}#positions", status_code=303)
+
+    @app.post("/sites/{site_id}/track/{query_id}/delete")
+    def untrack(site_id: int, query_id: int, csrf: str = Form(""),
+                user=Depends(current), c=Depends(conn)):
+        check_csrf(user, csrf)
+        own_site(c, user, site_id)
+        monitor.remove_query(c, user, query_id)
+        return RedirectResponse(f"/sites/{site_id}#positions", status_code=303)
+
+    @app.get("/settings")
+    def settings(request: Request, user=Depends(current)):
+        return page(request, "cabinet/settings.html.j2", user, dev=allow_private)
+
+    @app.post("/settings")
+    def settings_save(weekly_digest: str = Form(""), csrf: str = Form(""),
+                      user=Depends(current), c=Depends(conn)):
+        check_csrf(user, csrf)
+        c.execute("UPDATE users SET weekly_digest = %s WHERE id = %s",
+                  (weekly_digest == "yes", user["id"]))
+        return RedirectResponse("/settings", status_code=303)
+
+    @app.get("/unsubscribe")
+    def unsubscribe(request: Request, u: int = 0, t: str = "", c=Depends(conn)):
+        """Отписка по ссылке из письма, без входа. Ссылка подписана ключом сервиса."""
+        if not mailer.check_unsubscribe(u, t):
+            raise HTTPException(status_code=404)
+        c.execute("UPDATE users SET weekly_digest = false WHERE id = %s", (u,))
+        return page(request, "cabinet/unsubscribed.html.j2")
+
+    # письма на машине разработчика: посмотреть, что ушло бы пользователю
+    @app.get("/dev/outbox")
+    def dev_outbox(request: Request, user=Depends(current), c=Depends(conn)):
+        if not allow_private:
+            raise HTTPException(status_code=404)
+        rows = c.execute("SELECT id, subject, kind, status, created_at FROM outbox"
+                         " WHERE user_id = %s ORDER BY id DESC LIMIT 30", (user["id"],)).fetchall()
+        return page(request, "cabinet/outbox.html.j2", user, rows=rows)
+
+    @app.get("/dev/outbox/{mail_id}")
+    def dev_mail(mail_id: int, user=Depends(current), c=Depends(conn)):
+        if not allow_private:
+            raise HTTPException(status_code=404)
+        row = c.execute("SELECT html FROM outbox WHERE id = %s AND user_id = %s",
+                        (mail_id, user["id"])).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404)
+        return HTMLResponse(row["html"])
 
     @app.post("/sites/{site_id}/run")
     def run(request: Request, site_id: int, queries: str = Form(""),
@@ -192,9 +255,8 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         try:
             job_id = accounts.start_check(c, user, site, queries, max_pages)
         except Refused as exc:
-            return page(request, "cabinet/site.html.j2", user, site=site, status=400,
-                        error=str(exc), queries=queries,
-                        jobs=accounts.site_jobs(c, site_id))
+            return site_view(request, c, user, site, status=400, error=str(exc),
+                             queries=queries)
         return RedirectResponse(f"/jobs/{job_id}", status_code=303)
 
     @app.post("/sites/{site_id}/delete")
@@ -205,8 +267,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         try:
             accounts.delete_site(c, user, site["id"])
         except Refused as exc:
-            return page(request, "cabinet/site.html.j2", user, site=site, status=400,
-                        error=str(exc), jobs=accounts.site_jobs(c, site_id))
+            return site_view(request, c, user, site, status=400, error=str(exc))
         return RedirectResponse("/sites", status_code=303)
 
     def own_job(c, user, job_id: int) -> dict:

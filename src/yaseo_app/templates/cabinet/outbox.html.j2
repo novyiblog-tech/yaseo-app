@@ -1,0 +1,15 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}Письма{% endblock %}
+{% block main %}
+<div class="stack">
+  <h1>Письма</h1>
+  <div class="note fake">Машина разработчика: письма никуда не отправляются, здесь видно, что ушло бы.</div>
+  <div class="card table-scroll">
+  {% if rows %}
+    <table><thead><tr><th>№</th><th>Тема</th><th>Статус</th><th class="num">Когда</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td>{{ r.id }}</td><td><a href="/dev/outbox/{{ r.id }}" target="_blank" rel="noopener">{{ r.subject }}</a></td>
+      <td class="muted">{{ r.status }}</td><td class="num muted">{{ r.created_at|dt }}</td></tr>{% endfor %}</tbody></table>
+  {% else %}<p class="muted">Писем ещё не было.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

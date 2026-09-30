@@ -1,0 +1,10 @@
+yaSEO — что изменилось за неделю ({{ since.strftime('%d.%m') }} — {{ today.strftime('%d.%m.%Y') }})
+{% for s in sites %}
+== {{ s.url }}
+{% if s.check %}Проверка: оценка {{ s.check.score if s.check.score is not none else '—' }}{% if s.check.delta %} ({{ '+' if s.check.delta > 0 }}{{ s.check.delta }}){% endif %}{% if s.check.fixed is defined %}, исправлено {{ s.check.fixed }}, появилось {{ s.check.new }}{% endif %}
+{{ base }}/jobs/{{ s.check.id }}
+{% endif %}{% if s.tls %}Сертификат HTTPS истекает {{ s.tls.until }} — через {{ s.tls.days }} дн.
+{% endif %}{% if s.moves %}Позиции: выросли {{ s.up|length }}, просели {{ s.down|length }}
+{% for m in s.moves %}  {{ m.query }}: {{ m.week_ago or 'вне топ-10' }} -> {{ m.position or 'вне топ-10' }}
+{% endfor %}{% endif %}{% endfor %}
+Отписаться: {{ unsubscribe }}

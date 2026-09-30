@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS sources (
 
 INSERT INTO sources (name, title, enabled, price_rub, per_user_daily, service_daily_rub,
                      rate_per_hour, cache_ttl, note) VALUES
-    ('yandex-serp', 'Выдача Яндекса', true, 0.0305, 300, 500, NULL, interval '1 day',
+    ('yandex-serp', 'Выдача Яндекса', true, 0.0305, 3500, 5000, NULL, interval '20 hours',
      'отложенный запрос, одна страница выдачи = одно обращение; прайс 16.09.2026'),
     ('wordstat', 'Wordstat', true, 0.020, 200, 100, 100, interval '30 days',
      'квота 100 запросов в час на весь сервис; прайс 16.09.2026'),
@@ -189,3 +189,59 @@ CREATE INDEX IF NOT EXISTS payments_user ON payments (user_id, id DESC);
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS score int;
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS lights jsonb;
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS plan text;
+
+-- Наблюдение (этап 5).
+-- Повторная постановка той же задачи (ежедневные позиции сайта за день) — пустая операция.
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS dedupe_key text;
+CREATE UNIQUE INDEX IF NOT EXISTS jobs_dedupe ON jobs (dedupe_key) WHERE dedupe_key IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS tracked_queries (
+    id         bigserial PRIMARY KEY,
+    user_id    bigint NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    site_id    bigint NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+    query      text NOT NULL,
+    region     int NOT NULL DEFAULT 225,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (site_id, query, region)
+);
+
+-- Место сайта по запросу за день. NULL — вне глубины съёма. День — московский.
+CREATE TABLE IF NOT EXISTS positions (
+    site_id    bigint NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+    query      text NOT NULL,
+    region     int NOT NULL,
+    day        date NOT NULL,
+    position   int,
+    url        text,
+    top3       jsonb,
+    checked_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (site_id, query, region, day)
+);
+
+-- Позиции снимаются раз в сутки: кэш выдачи короче суток, иначе завтрашний съём
+-- получит вчерашнюю выдачу. Меняем только заводские значения, ручные правки не трогаем.
+UPDATE sources SET cache_ttl = interval '20 hours'
+    WHERE name = 'yandex-serp' AND cache_ttl = interval '1 day';
+UPDATE sources SET per_user_daily = 3500
+    WHERE name = 'yandex-serp' AND per_user_daily = 300;
+UPDATE sources SET service_daily_rub = 5000
+    WHERE name = 'yandex-serp' AND service_daily_rub = 500;
+
+-- Письма: всё, что уходит пользователю, сначала ложится сюда. Отправитель (SMTP или
+-- сервис рассылок) забирает отсюда. Ключ не даёт отправить одно письмо дважды.
+CREATE TABLE IF NOT EXISTS outbox (
+    id         bigserial PRIMARY KEY,
+    user_id    bigint REFERENCES users(id) ON DELETE CASCADE,
+    to_email   text NOT NULL,
+    subject    text NOT NULL,
+    html       text NOT NULL,
+    text       text NOT NULL,
+    kind       text NOT NULL,
+    dedupe_key text UNIQUE,
+    status     text NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'sent', 'failed')),
+    attempts   int NOT NULL DEFAULT 0,
+    error      text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    sent_at    timestamptz
+);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS weekly_digest boolean NOT NULL DEFAULT true;

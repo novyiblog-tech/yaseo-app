@@ -175,14 +175,15 @@ def list_sites(conn: psycopg.Connection, user: dict) -> list[dict]:
                d.scores, d.last_done_id, d.lights
         FROM sites s
         LEFT JOIN LATERAL (
-            SELECT id, status, finished_at, created_at FROM jobs WHERE site_id = s.id
-            ORDER BY id DESC LIMIT 1
+            SELECT id, status, finished_at, created_at FROM jobs
+            WHERE site_id = s.id AND kind = 'audit' ORDER BY id DESC LIMIT 1
         ) j ON true
         LEFT JOIN LATERAL (
             SELECT array_agg(score ORDER BY id) AS scores, max(id) AS last_done_id,
                    (array_agg(lights ORDER BY id DESC))[1] AS lights
             FROM (SELECT id, score, lights FROM jobs
-                  WHERE site_id = s.id AND status = 'done' ORDER BY id DESC LIMIT 12) t
+                  WHERE site_id = s.id AND kind = 'audit' AND status = 'done'
+                  ORDER BY id DESC LIMIT 12) t
         ) d ON true
         WHERE s.user_id = %s ORDER BY s.id
         """,
@@ -214,7 +215,7 @@ def previous_done(conn: psycopg.Connection, job: dict) -> dict | None:
     if not job.get("site_id"):
         return None
     return conn.execute(
-        "SELECT * FROM jobs WHERE site_id = %s AND status = 'done' AND id < %s"
+        "SELECT * FROM jobs WHERE site_id = %s AND kind = 'audit' AND status = 'done' AND id < %s"
         " ORDER BY id DESC LIMIT 1", (job["site_id"], job["id"])).fetchone()
 
 
@@ -230,7 +231,7 @@ def site_jobs(conn: psycopg.Connection, site_id: int, limit: int = 20) -> list[d
         " jsonb_array_length(coalesce(result->'queries', '[]')) AS queries,"
         " (result->'spend'->>'cost_rub')::numeric AS cost_rub,"
         " result->>'sources_mode' AS sources_mode"
-        " FROM jobs WHERE site_id = %s ORDER BY id DESC LIMIT %s",
+        " FROM jobs WHERE site_id = %s AND kind = 'audit' ORDER BY id DESC LIMIT %s",
         (site_id, limit),
     ).fetchall()
 
@@ -243,7 +244,7 @@ def start_check(conn: psycopg.Connection, user: dict, site: dict, queries_text: 
                 max_pages: int = 20) -> int:
     active = conn.execute(
         "SELECT count(*) FILTER (WHERE site_id = %s) AS here, count(*) AS total FROM jobs"
-        " WHERE user_id = %s AND status IN ('queued', 'running')",
+        " WHERE user_id = %s AND kind = 'audit' AND status IN ('queued', 'running')",
         (site["id"], user["id"]),
     ).fetchone()
     if active["here"]:
@@ -263,5 +264,5 @@ def start_check(conn: psycopg.Connection, user: dict, site: dict, queries_text: 
 
 
 def get_job(conn: psycopg.Connection, user: dict, job_id: int) -> dict | None:
-    return conn.execute("SELECT * FROM jobs WHERE id = %s AND user_id = %s",
+    return conn.execute("SELECT * FROM jobs WHERE id = %s AND user_id = %s AND kind = 'audit'",
                         (job_id, user["id"])).fetchone()

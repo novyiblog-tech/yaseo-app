@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>yaSEO — неделя</title></head>
+<body style="margin:0;background:#f3efe6;font-family:Helvetica,Arial,sans-serif;color:#111;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3efe6;"><tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fffdf8;border:1px solid #d9d3c4;border-radius:14px;">
+<tr><td style="padding:24px 28px 8px;">
+  <div style="font-weight:800;font-size:20px;letter-spacing:-0.5px;">ya<span style="background:#c8ff00;padding:0 3px;">SEO</span></div>
+  <h1 style="font-size:24px;line-height:1.2;margin:18px 0 4px;">Что изменилось за неделю</h1>
+  <p style="margin:0;color:#5b5b5b;font-size:14px;">{{ since.strftime('%d.%m') }} — {{ today.strftime('%d.%m.%Y') }}</p>
+</td></tr>
+{% for s in sites %}
+<tr><td style="padding:18px 28px 6px;border-top:1px solid #ebe6da;">
+  <h2 style="font-size:17px;margin:0 0 10px;"><a href="{{ base }}/sites/{{ s.id }}" style="color:#111;">{{ s.url }}</a></h2>
+  {% if s.check %}
+  <p style="margin:0 0 8px;font-size:14px;">Проверка: оценка <b>{{ s.check.score if s.check.score is not none else '—' }}</b>
+    {% if s.check.delta %}({{ '+' if s.check.delta > 0 }}{{ s.check.delta }}){% endif %}
+    {% if s.check.fixed is defined %} · исправлено {{ s.check.fixed }}, появилось {{ s.check.new }}{% endif %}
+    · <a href="{{ base }}/jobs/{{ s.check.id }}" style="color:#111;">открыть</a></p>
+  {% endif %}
+  {% if s.tls %}
+  <p style="margin:0 0 8px;font-size:14px;color:#b3261e;">Сертификат HTTPS истекает {{ s.tls.until }} — через {{ s.tls.days }} дн. Продлите, иначе браузеры закроют сайт предупреждением.</p>
+  {% endif %}
+  {% if s.moves %}
+  <p style="margin:0 0 6px;font-size:14px;">Позиции: выросли {{ s.up|length }}, просели {{ s.down|length }}.</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="font-size:14px;margin-bottom:8px;">
+    {% for m in s.moves %}
+    <tr><td style="padding:5px 0;border-bottom:1px solid #ebe6da;">{{ m.query }}</td>
+      <td align="right" style="padding:5px 0;border-bottom:1px solid #ebe6da;white-space:nowrap;">
+        {{ m.week_ago or 'вне топ-10' }} → <b>{{ m.position or 'вне топ-10' }}</b>
+        <span style="color:{{ '#1f7a3f' if m.delta > 0 else '#b3261e' }};">{{ '▲' if m.delta > 0 else '▼' }}</span></td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</td></tr>
+{% endfor %}
+<tr><td style="padding:18px 28px 24px;border-top:1px solid #ebe6da;color:#8a8a8a;font-size:12px;">
+  Письмо приходит раз в неделю, если на сайтах что-то изменилось.
+  <a href="{{ unsubscribe }}" style="color:#8a8a8a;">Отписаться</a>
+</td></tr>
+</table></td></tr></table>
+</body></html>

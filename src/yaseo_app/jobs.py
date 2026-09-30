@@ -19,13 +19,16 @@ class LeaseLost(Exception):
 
 
 def enqueue(conn: psycopg.Connection, user_id: int, kind: str, params: dict,
-            site_id: int | None = None, max_attempts: int = 3) -> int:
+            site_id: int | None = None, max_attempts: int = 3,
+            dedupe_key: str | None = None) -> int | None:
+    """Номер задачи. С dedupe_key повторная постановка вернёт None и ничего не создаст."""
     row = conn.execute(
-        "INSERT INTO jobs (user_id, site_id, kind, params, max_attempts)"
-        " VALUES (%s, %s, %s, %s, %s) RETURNING id",
-        (user_id, site_id, kind, Jsonb(params), max_attempts),
+        "INSERT INTO jobs (user_id, site_id, kind, params, max_attempts, dedupe_key)"
+        " VALUES (%s, %s, %s, %s, %s, %s)"
+        " ON CONFLICT (dedupe_key) WHERE dedupe_key IS NOT NULL DO NOTHING RETURNING id",
+        (user_id, site_id, kind, Jsonb(params), max_attempts, dedupe_key),
     ).fetchone()
-    return row["id"]
+    return row["id"] if row else None
 
 
 def _reap(conn: psycopg.Connection) -> None:

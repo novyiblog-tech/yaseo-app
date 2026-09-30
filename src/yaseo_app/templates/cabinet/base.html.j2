@@ -18,6 +18,7 @@
     {% if user %}
       <a href="/sites">Мои сайты</a>
       <a href="/billing">Тариф</a>
+      <a href="/settings">Настройки</a>
       <span class="muted">{{ user.email }}</span>
       <form method="post" action="/logout">
         <input type="hidden" name="csrf" value="{{ user.csrf }}">

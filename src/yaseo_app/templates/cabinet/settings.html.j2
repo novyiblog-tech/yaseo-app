@@ -1,0 +1,16 @@
+{% extends "cabinet/base.html.j2" %}
+{% block title %}Настройки{% endblock %}
+{% block main %}
+<div class="stack">
+  <h1>Настройки</h1>
+  <form class="card" method="post" action="/settings">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
+    <h2>Письма</h2>
+    <p class="muted small">Почта: {{ user.email }}</p>
+    <label class="check"><input type="checkbox" name="weekly_digest" value="yes" {% if user.weekly_digest %}checked{% endif %}>
+      <span>Раз в неделю присылать, что изменилось: позиции, новые проверки, срок сертификата. Если ничего не изменилось — письма не будет.</span></label>
+    <p style="margin-top:18px"><button class="btn" type="submit">Сохранить</button></p>
+  </form>
+  {% if dev %}<p class="muted small">Машина разработчика: <a href="/dev/outbox">письма, которые ушли бы вам</a>.</p>{% endif %}
+</div>
+{% endblock %}

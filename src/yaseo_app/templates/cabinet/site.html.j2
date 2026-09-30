@@ -19,6 +19,36 @@
     </div>
     {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
   </form>
+  <section class="card table-scroll" id="positions">
+    <h2>Позиции под наблюдением</h2>
+    {% if quota.limit %}
+    <p class="muted small" style="margin-bottom:14px">Снимаются каждую ночь, в Яндексе по России, глубина — первая десятка. Занято {{ quota.used }} из {{ quota.limit }} по тарифу.</p>
+    {% if positions %}
+    <table>
+      <thead><tr><th>Запрос</th><th class="num">Место</th><th class="num">За неделю</th><th>30 дней</th><th></th></tr></thead>
+      <tbody>{% for p in positions %}
+        <tr><td>{{ p.query }}</td>
+          <td class="num">{% if p.day %}{{ p.position or 'вне топ-10' }}{% else %}<span class="muted">ждёт съёма</span>{% endif %}</td>
+          <td class="num">{% if p.delta %}<span class="{{ 'up' if p.delta > 0 else 'down' }}">{{ '▲' if p.delta > 0 else '▼' }} {{ p.delta|abs }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td class="spark-cell">{{ p.spark|safe }}</td>
+          <td class="num"><form method="post" action="/sites/{{ site.id }}/track/{{ p.id }}/delete">
+            <input type="hidden" name="csrf" value="{{ user.csrf }}">
+            <button class="linkbtn small" type="submit" aria-label="Убрать {{ p.query }}">убрать</button></form></td></tr>
+      {% endfor %}</tbody>
+    </table>
+    {% endif %}
+    <form method="post" action="/sites/{{ site.id }}/track" style="margin-top:16px">
+      <input type="hidden" name="csrf" value="{{ user.csrf }}">
+      <div class="field" style="margin-top:0"><label for="track">Добавить запросы — по одному в строке</label>
+        <textarea id="track" name="queries" style="min-height:80px">{{ track_text or '' }}</textarea></div>
+      <p style="margin-top:12px"><button class="btn ghost" type="submit">Следить</button></p>
+      {% if track_error %}<div class="error" role="alert">{{ track_error }}</div>{% endif %}
+    </form>
+    {% else %}
+    <p class="muted">Ежедневные позиции по вашим запросам и письмо раз в неделю о том, что изменилось, — в тарифах от «Старт». <a href="/billing">Тарифы</a></p>
+    {% endif %}
+  </section>
+
   <div class="card table-scroll">
     <h2>История</h2>
     {% if jobs %}
