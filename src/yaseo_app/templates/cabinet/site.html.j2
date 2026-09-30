@@ -10,7 +10,7 @@
     <input type="hidden" name="csrf" value="{{ user.csrf }}">
     <h2>Новая проверка</h2>
     <div class="field"><label for="queries">Что клиенты пишут в Яндексе, когда ищут ваши услуги
-      <span class="hint">Каждая фраза — с новой строки, до {{ plan.queries_per_audit or 30 }}. Например: «ремонт квартир в краснодаре».</span></label>
+      <span class="hint">Каждая фраза — с новой строки, до {{ plan.queries_per_audit or 30 }}.</span></label>
       <textarea id="queries" name="queries" placeholder="ремонт квартир в краснодаре&#10;дизайн интерьера">{{ queries or '' }}</textarea></div>
     <p class="muted small" style="margin-top:8px">Можно оставить пустым — тогда проверим только сайт: ошибки и готовность к нейросетям. С фразами покажем ещё, сколько людей их ищет, на каком месте вы в Яндексе и упоминает ли вас нейросеть Яндекса.</p>
     <div class="row" style="margin-top:16px">
