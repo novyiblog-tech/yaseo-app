@@ -40,6 +40,8 @@
     <p class="l-end">Без доступа к&nbsp;сайту.<br><b>Без установки кода.</b></p>
   </div>
 
+  <div class="l-stage">
+  <img class="l-rock" src="{{ 'rock-hero.webp'|img }}" alt="" width="1200" height="1400" fetchpriority="high">
   <a class="l-sample card" href="/example" target="_blank" rel="noopener" aria-label="Открыть пример отчёта">
     <span class="muted small">Пример отчёта · тестовый сайт мастерской</span>
     <span class="l-sample-score">24<small>/100</small></span>
@@ -51,6 +53,7 @@
     <span class="l-sample-step"><b>Шаг 1. Ссылка в никуда</b><br><span class="muted small">Исправить адрес ссылки или убрать её · 5 минут на ссылку</span></span>
     <span class="l-more acc">Открыть пример <span class="arrow" aria-hidden="true">→</span></span>
   </a>
+  </div>
 </section>
 
 <section class="l-section">
@@ -121,6 +124,23 @@
     <p>Нет. Первая страница отчёта — для владельца бизнеса: оценка и шаги простым языком. Таблицы по страницам — для того, кто будет исправлять.</p></details>
   <details><summary>Что вы проверяете в нейросетях?</summary>
     <p>Ссылается ли ответ нейросети Яндекса на ваш сайт по вашим запросам, кого она называет вместо вас и не закрыт ли сайт для ИИ-роботов в robots.txt.</p></details>
+</section>
+
+<section class="l-final">
+  <div class="l-final-body">
+    <h2 class="l-h2">Проверьте <span class="acc">свой сайт</span></h2>
+    <p class="l-lead">Оценка из&nbsp;100 и&nbsp;план исправлений — за&nbsp;пару минут, без доступа к&nbsp;сайту.</p>
+    {% if beta_on %}
+    <p style="margin-top:28px"><a class="btn" href="#waitlist">Оставить заявку <span aria-hidden="true">→</span></a></p>
+    {% else %}
+    <form class="l-check" method="get" action="/signup">
+      <label class="sr-only" for="site-final">Адрес сайта</label>
+      <input id="site-final" type="text" name="site" placeholder="адрес вашего сайта" required>
+      <button class="btn" type="submit">Проверить бесплатно <span aria-hidden="true">→</span></button>
+    </form>
+    {% endif %}
+  </div>
+  <img class="l-final-rock" src="{{ 'rock-wide.webp'|img }}" alt="" width="1600" height="900" loading="lazy">
 </section>
 
 <footer class="l-foot">

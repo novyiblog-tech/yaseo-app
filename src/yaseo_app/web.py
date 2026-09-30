@@ -7,6 +7,8 @@ YASEO_INSECURE_COOKIES=1 — cookie без Secure, для http://localhost.
 """
 from __future__ import annotations
 
+import functools
+import hashlib
 import os
 from contextlib import asynccontextmanager
 from decimal import Decimal
@@ -26,6 +28,7 @@ from yaseo_app import accounts, beta, billing, db, legal, history, mailer, monit
 from yaseo_app.accounts import Refused
 
 HERE = Path(__file__).parent
+IMAGES = HERE / "design" / "img"
 COOKIE = "yaseo_session"
 PUBLIC_PATHS = {"/", "/example", "/robots.txt", "/sitemap.xml"}
 RENDER = HERE.parent.parent / "scripts" / "chrome-render.sh"
@@ -57,10 +60,21 @@ def _money(v) -> str:
     return f"{Decimal(str(v)):.2f}".replace(".", ",") + " ₽"
 
 
+def _img_url(name: str) -> str:
+    """Адрес картинки с отпечатком содержимого: перерисовали — адрес сменился, кэш не мешает."""
+    return f"/img/{name}?v={_img_digest(name, (IMAGES / name).stat().st_mtime_ns)}"
+
+
+@functools.lru_cache(maxsize=32)
+def _img_digest(name: str, mtime_ns: int) -> str:
+    return hashlib.sha256((IMAGES / name).read_bytes()).hexdigest()[:10]
+
+
 def _templates() -> Environment:
     env = Environment(loader=FileSystemLoader(HERE / "templates"),
                       autoescape=select_autoescape(["html", "j2"]))
     env.filters["money"] = _money
+    env.filters["img"] = _img_url
     env.filters["rub"] = billing.money
     env.filters["num"] = lambda v: f"{v:,}".replace(",", "\u00a0") if isinstance(v, int) else v
     env.filters["dt"] = lambda d: d.astimezone().strftime("%d.%m.%Y %H:%M") if d else "—"
@@ -98,7 +112,8 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         resp.headers["Content-Security-Policy"] = CSP
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["Referrer-Policy"] = "same-origin"
-        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Cache-Control"] = ("public, max-age=86400" if request.url.path.startswith("/img/")
+                                         else "no-store")
         if request.url.path not in PUBLIC_PATHS and not request.url.path.startswith("/legal/"):
             resp.headers["X-Robots-Tag"] = "noindex, nofollow"
         return resp
@@ -195,6 +210,14 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
     def privacy(request: Request):
         return page(request, "landing/legal.html.j2",
                     title="Политика обработки персональных данных")
+
+    @app.get("/img/{name}")
+    def image(name: str):
+        """Картинки оформления из design/img: только готовые webp, без путей."""
+        path = IMAGES / name
+        if not name.endswith(".webp") or "/" in name or name.startswith(".") or not path.is_file():
+            raise HTTPException(status_code=404)
+        return Response(path.read_bytes(), media_type="image/webp")
 
     @app.get("/robots.txt")
     def robots(request: Request):

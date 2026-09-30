@@ -96,10 +96,10 @@ def sender() -> Sender:
 
 def build(row: dict) -> EmailMessage:
     msg = EmailMessage()
-    msg["From"] = formataddr(("yaseo", os.environ.get("YASEO_MAIL_FROM", "noreply@yaseo.local")))
+    msg["From"] = formataddr(("yaseo", os.environ.get("YASEO_MAIL_FROM", "noreply@yaseo.site")))
     msg["To"] = row["to_email"]
     msg["Subject"] = row["subject"]
-    msg["Message-ID"] = make_msgid(domain="yaseo")
+    msg["Message-ID"] = make_msgid(domain="yaseo.site")
     msg["X-Outbox-Id"] = str(row["id"])
     if row["user_id"]:
         base = os.environ.get("YASEO_BASE_URL", "http://127.0.0.1:8000")

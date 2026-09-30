@@ -111,15 +111,20 @@ tr:last-child td { border-bottom: 0; }
 .meter-head { display: flex; justify-content: space-between; font-size: var(--size-small); color: var(--ink-2); margin-bottom: 6px; }
 .bar-track { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
 .bar-track i { display: block; height: 100%; background: var(--accent); }
-.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-.plan { display: grid; gap: 12px; align-content: start; padding: 22px; background: var(--glass), var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+/* пять тарифов в ряд; где тесно — лента с прокруткой, чтобы не было рядов 3 + 2 */
+.plans { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 1000px) { .plans { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 12px; } .plan { scroll-snap-align: start; } }
+.plan { display: flex; flex-direction: column; gap: 12px; padding: 22px; background: var(--glass), var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
 .plan.current { border-color: transparent; box-shadow: var(--glow); }
 .plan .price { font-family: var(--font-display); font-weight: 900; font-size: 26px; letter-spacing: -0.03em; }
 .plan .price span { font-size: var(--size-small); color: var(--ink-3); font-weight: 600; }
-.plan form { margin-top: auto; }
-.plan .btn { width: 100%; }
+.plan-foot { margin-top: auto; padding-top: 12px; }
+.plan .btn { width: 100%; min-height: 46px; padding-left: 10px; padding-right: 10px; white-space: nowrap; }
+/* рамка — внутренней тенью: высота как у обычной кнопки */
+.btn.state { background: transparent; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); cursor: default; }
+.btn.state:hover { filter: none; }
+.btn.state.current { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 @media (max-width: 720px) { .diff-nums { grid-template-columns: repeat(2, 1fr); } }
-.plan .pill { justify-self: start; }
 .spark-cell { color: var(--ink-3); width: 130px; }
 .confirm-bar { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .confirm-bar .linkbtn { color: #ffd97a; text-decoration: underline; }
@@ -128,11 +133,15 @@ tr:last-child td { border-bottom: 0; }
    пилюли, стекло с лаймовой кромкой, строка «01 / 06 ———» над разделом */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .landing { display: grid; gap: 112px; }
+.landing > * { min-width: 0; }  /* иначе лента тарифов растягивает страницу вбок */
 .acc { color: var(--accent); }
 .l-kick { display: flex; align-items: center; gap: 14px; font-size: var(--size-small); color: var(--ink-2); font-variant-numeric: tabular-nums; margin-bottom: 22px; }
 .l-kick::after { content: ""; width: 64px; height: 1px; background: currentColor; }
 .l-hero { position: relative; display: grid; grid-template-columns: 1.35fr 1fr; gap: 48px; align-items: center; padding-top: 16px; }
-.l-hero::before { content: ""; position: absolute; z-index: -1; right: 0; top: 4%; width: 55%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, rgba(200,255,0,0.16), rgba(200,255,0,0) 70%); pointer-events: none; }
+/* сцена справа: камень с трещинами (scripts/render-rock.py), карточка стоит на нём */
+.l-stage { position: relative; isolation: isolate; padding-bottom: calc(94% - 40px); }
+/* верх груды — на трети высоты кадра: отступ снизу подобран так, чтобы карточка стояла на камне */
+.l-rock { position: absolute; z-index: -1; left: 50%; bottom: 0; width: calc(100% + 48px); height: auto; transform: translateX(-50%); pointer-events: none; user-select: none; }
 .l-title { font-size: clamp(38px, 5.4vw, 72px); line-height: 0.94; letter-spacing: -0.035em; }
 .l-lead { font-size: 19px; color: var(--ink); opacity: .82; margin-top: 26px; max-width: 44ch; }
 .l-check { display: flex; gap: 8px; margin-top: 30px; max-width: 580px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-pill); }
@@ -162,6 +171,11 @@ tr:last-child td { border-bottom: 0; }
 .l-steps li::before { content: "0" counter(st); position: absolute; left: 18px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-family: var(--font-display); font-weight: 900; font-size: 16px; }
 .l-steps span { color: var(--ink-2); }
 .l-steps em { font-style: normal; font-size: var(--size-small); color: var(--ink-3); }
+.l-final { position: relative; text-align: center; }
+.l-final-body { position: relative; z-index: 1; display: grid; justify-items: center; }
+.l-final .l-lead { margin-left: auto; margin-right: auto; }
+.l-final .l-check { width: 100%; }
+.l-final-rock { display: block; width: 100%; height: auto; margin-top: -9%; pointer-events: none; user-select: none; }
 .l-faq details { border-bottom: 1px solid var(--line); padding: 18px 0; }
 .l-faq summary { cursor: pointer; font-weight: 700; font-size: 17px; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .l-faq summary::-webkit-details-marker { display: none; }
@@ -173,7 +187,9 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 860px) {
   .landing { gap: 72px; }
   .l-hero, .l-split { grid-template-columns: 1fr; gap: 36px; }
-  .l-hero::before { right: 0; top: 45%; width: 100%; }
+  .l-stage { padding-bottom: calc(94% - 60px); }
+  .l-rock { width: 100%; }
+  .l-final-rock { margin-top: -4%; }
   .l-grid3 { grid-template-columns: 1fr; }
   .l-check { flex-direction: column; border-radius: var(--radius-lg); }
   .l-sample { transform: none; }

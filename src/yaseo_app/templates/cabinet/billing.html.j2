@@ -58,14 +58,18 @@
           <li>{% if t.pdf %}PDF отчёта{% else %}<span class="muted">без PDF</span>{% endif %}</li>
           {% if t.white_label %}<li>свой логотип в отчёте <span class="muted">— скоро</span></li>{% endif %}
         </ul>
-        {% if t.code == p.code %}<span class="pill ok">ваш тариф</span>
-        {% elif t.period != 'free' %}
+        {# у каждой карточки одно и то же место внизу: кнопка или состояние того же размера #}
+        <div class="plan-foot">
+        {% if t.code == p.code %}<span class="btn state current">✓ ваш тариф</span>
+        {% elif t.period == 'free' %}<span class="btn state">Бесплатно</span>
+        {% else %}
         <form method="post" action="/billing/buy">
           <input type="hidden" name="csrf" value="{{ user.csrf }}">
           <input type="hidden" name="plan" value="{{ t.code }}">
           <button class="btn" type="submit">{{ 'Купить' if t.period == 'once' else 'Подключить' }}</button>
         </form>
         {% endif %}
+        </div>
       </div>
       {% endfor %}
     </div>

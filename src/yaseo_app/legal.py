@@ -18,12 +18,14 @@ FIELDS = {
     "email": ("YASEO_SUPPORT_EMAIL", "почта для обращений"),
     "site": ("YASEO_SITE_DOMAIN", "адрес сайта сервиса"),
 }
+# Домен куплен 30.09.2026 на рег.ру; окружение может его переопределить.
+DEFAULTS = {"site": "yaseo.site"}
 
 
 def requisites() -> dict:
     out, missing = {}, []
     for key, (env, label) in FIELDS.items():
-        value = (os.environ.get(env) or "").strip()
+        value = (os.environ.get(env) or DEFAULTS.get(key, "")).strip()
         if not value:
             missing.append(label)
             value = f"[{label}]"
