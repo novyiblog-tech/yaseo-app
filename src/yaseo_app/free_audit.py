@@ -16,7 +16,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-SCHEMA = 1
+SCHEMA = 2
 MAX_PAGES_LIMIT = 200
 JOB_TIMEOUT = 900
 
@@ -47,6 +47,8 @@ def collect(url: str, max_pages: int = 20, allow_private: bool = False,
     from yaseo import audit, net
     from yaseo.geo import readiness
 
+    from yaseo_app import site_checks
+
     max_pages = max(1, min(int(max_pages), MAX_PAGES_LIMIT))
     private = True if allow_private else None
     net.check_url(url, allow_private=private)
@@ -54,13 +56,17 @@ def collect(url: str, max_pages: int = 20, allow_private: bool = False,
     site = audit.audit_site(url, max_pages=max_pages, use_proxy=use_proxy,
                             allow_private=private)
     geo = readiness.check(url, allow_private=private)
+    audit_dict = dataclasses.asdict(site)
+    checks = site_checks.run(url, allow_private=allow_private, use_proxy=use_proxy)
+    audit_dict["issues"] = audit_dict.get("issues", []) + checks.pop("issues")
     return {
         "schema": SCHEMA,
         "url": url,
         "engine": version("yaseo"),
         "collected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "paid_calls": 0,
-        "audit": dataclasses.asdict(site),
+        "audit": audit_dict,
+        "checks": checks,
         "geo": dataclasses.asdict(geo),
     }
 

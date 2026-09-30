@@ -42,6 +42,29 @@
     </div>
   </section>
 
+  {% set ch = r.free.checks %}
+  {% if ch %}
+  <section class="card">
+    <h2>Что видит робот и HTTPS</h2>
+    <ul class="plain">
+      {% set v = ch.access.verdict %}
+      <li><span class="dot {{ {'real': 'green', 'stub': 'red', 'down': 'red'}.get(v, 'yellow') }}"></span>
+        {{ {'real': 'Робот видит настоящий сайт', 'stub': 'Робот видит заглушку защиты вместо сайта — оценка не выставлена',
+            'empty': 'Текст страницы появляется только после скриптов', 'differs': 'Роботу сайт отдаёт меньше, чем человеку',
+            'down': 'Сайт не открылся'}[v] }}
+        <span class="muted small">· {{ ch.access.evidence }}</span></li>
+      {% if ch.https %}
+      {% set tls = ch.https.tls %}
+      <li><span class="dot {{ 'green' if tls.ok else 'red' }}"></span>
+        {% if tls.ok %}Сертификат действует до {{ tls.not_after[:10] }}{% if tls.issuer %} <span class="muted small">· {{ tls.issuer }}</span>{% endif %}
+        {% elif tls.no_tls %}Сайт не открывается по https{% else %}Сертификат недействителен <span class="muted small">· {{ tls.error }}</span>{% endif %}</li>
+      <li><span class="dot {{ 'green' if ch.https.mirrors.main else 'yellow' }}"></span>
+        {% if ch.https.mirrors.main %}Один главный адрес: {{ ch.https.mirrors.main }}{% else %}Сайт открывается по нескольким адресам как разные сайты{% endif %}</li>
+      {% endif %}
+    </ul>
+  </section>
+  {% endif %}
+
   {% if diff %}
   <section class="card">
     <h2>С прошлой проверки <a class="muted small" href="/jobs/{{ diff.prev_id }}">№{{ diff.prev_id }}</a></h2>

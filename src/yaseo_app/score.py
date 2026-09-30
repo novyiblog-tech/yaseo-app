@@ -171,7 +171,16 @@ def build_steps(result: dict, limit: int = 7) -> list[Step]:
     return steps[:limit]
 
 
+STUB_NOTE = "сайт показал роботу заглушку защиты — оценка была бы недостоверной"
+
+
 def assess(result: dict, limit: int = 7) -> Assessment:
     lights = [tech_light(result["audit"]), yandex_light(result), ai_light(result["geo"])]
+    access = (result.get("checks") or {}).get("access") or {}
+    if access.get("verdict") == "stub":
+        # Обход видел заглушку, а не сайт: находки по страницам — про заглушку.
+        for l in lights:
+            if l.score is not None:
+                l.score, l.color, l.note = None, "grey", STUB_NOTE
     return Assessment(total_score(lights), lights, build_steps(result, limit),
                       [l.key for l in lights if l.score is not None])
