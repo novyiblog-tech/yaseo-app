@@ -1,6 +1,20 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "cabinet", "runtimeExecutable": "scripts/dev.sh", "runtimeArgs": [], "port": 8000 }
+    {
+      "name": "cabinet",
+      "runtimeExecutable": "scripts/dev.sh",
+      "runtimeArgs": [],
+      "port": 8000
+    },
+    {
+      "name": "web-only",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "YASEO_APP_DSN=dbname=yaseo_app YASEO_ALLOW_PRIVATE=1 YASEO_INSECURE_COOKIES=1 YASEO_SOURCES=fake exec uv run uvicorn yaseo_app.web:app --host 127.0.0.1 --port 8011"
+      ],
+      "port": 8011
+    }
   ]
 }

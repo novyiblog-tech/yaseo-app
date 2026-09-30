@@ -96,7 +96,7 @@ def sender() -> Sender:
 
 def build(row: dict) -> EmailMessage:
     msg = EmailMessage()
-    msg["From"] = formataddr(("yaSEO", os.environ.get("YASEO_MAIL_FROM", "noreply@yaseo.local")))
+    msg["From"] = formataddr(("yaseo", os.environ.get("YASEO_MAIL_FROM", "noreply@yaseo.local")))
     msg["To"] = row["to_email"]
     msg["Subject"] = row["subject"]
     msg["Message-ID"] = make_msgid(domain="yaseo")

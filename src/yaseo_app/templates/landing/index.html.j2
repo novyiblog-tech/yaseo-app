@@ -2,7 +2,7 @@
 {% block title %}Проверка сайта: Яндекс и нейросети{% endblock %}
 {% block head %}
 <meta name="description" content="Проверка сайта по адресу: оценка из 100, три светофора — техника, Яндекс, нейросети — и 5–7 шагов простым языком: что исправить, кто это делает и сколько времени займёт.">
-<meta property="og:title" content="yaSEO — что Яндекс и нейросети видят на вашем сайте">
+<meta property="og:title" content="yaseo — что Яндекс и нейросети видят на вашем сайте">
 <meta property="og:description" content="Оценка из 100 и план исправлений простым языком. Без доступа к сайту.">
 <meta property="og:type" content="website">
 <link rel="canonical" href="{{ request_base }}/">
@@ -12,7 +12,8 @@
 
 <section class="l-hero">
   <div>
-    <h1 class="l-title">Что <mark>Яндекс</mark> и&nbsp;нейросети видят на&nbsp;вашем сайте</h1>
+    <p class="l-kick">01 / 06</p>
+    <h1 class="l-title">Что Яндекс и&nbsp;нейросети <span class="acc">видят на&nbsp;вашем сайте</span></h1>
     <p class="l-lead">Проверка по адресу сайта: оценка из&nbsp;100, три светофора и&nbsp;5–7&nbsp;шагов простым языком — что исправить, кто это делает и&nbsp;сколько времени займёт.</p>
     {% if beta_on %}
     <div class="l-cta" id="waitlist">
@@ -33,10 +34,10 @@
     <form class="l-check" method="get" action="/signup">
       <label class="sr-only" for="site">Адрес сайта</label>
       <input id="site" type="text" name="site" placeholder="адрес вашего сайта" required>
-      <button class="btn" type="submit">Проверить бесплатно</button>
+      <button class="btn" type="submit">Проверить бесплатно <span aria-hidden="true">→</span></button>
     </form>
     {% endif %}
-    <p class="muted small" style="margin-top:14px">Без доступа к сайту и без установки кода.</p>
+    <p class="l-end">Без доступа к&nbsp;сайту.<br><b>Без установки кода.</b></p>
   </div>
 
   <a class="l-sample card" href="/example" target="_blank" rel="noopener" aria-label="Открыть пример отчёта">
@@ -48,12 +49,13 @@
       <span><span class="dot yellow"></span>Нейросети 56</span>
     </span>
     <span class="l-sample-step"><b>Шаг 1. Ссылка в никуда</b><br><span class="muted small">Исправить адрес ссылки или убрать её · 5 минут на ссылку</span></span>
-    <span class="l-more">Открыть пример →</span>
+    <span class="l-more acc">Открыть пример <span class="arrow" aria-hidden="true">→</span></span>
   </a>
 </section>
 
 <section class="l-section">
-  <h2 class="l-h2">Три вопроса, на&nbsp;которые отвечает отчёт</h2>
+  <p class="l-kick">02 / 06</p>
+  <h2 class="l-h2">Три вопроса, <span class="acc">на&nbsp;которые отвечает отчёт</span></h2>
   <div class="l-grid3">
     <div class="card"><span class="l-num">01</span><h3>Видит ли поиск ваш сайт целиком</h3>
       <p class="muted">Битые ссылки, заголовки и описания страниц, дубли, HTTPS и сертификат. И главное — не показывает ли защита от ботов поисковику заглушку вместо сайта.</p></div>
@@ -66,7 +68,8 @@
 
 <section class="l-section l-split">
   <div>
-    <h2 class="l-h2">Не список ошибок, а&nbsp;план</h2>
+    <p class="l-kick">03 / 06</p>
+    <h2 class="l-h2">Не список ошибок, <span class="acc">а&nbsp;план</span></h2>
     <p class="l-text">У каждого шага — что не так и почему это важно, что сделать, кому поручить и сколько времени займёт. Сначала то, что даёт больше всего.</p>
     <p class="l-text muted">Полные таблицы по страницам — в том же отчёте, для того, кто будет исправлять.</p>
   </div>
@@ -78,16 +81,18 @@
 </section>
 
 <section class="l-section">
-  <h2 class="l-h2">Как это работает</h2>
+  <p class="l-kick">04 / 06</p>
+  <h2 class="l-h2">Как это <span class="acc">работает</span></h2>
   <div class="l-grid3">
-    <div><span class="l-num">1</span><h3>Введите адрес</h3><p class="muted">И запросы, по которым вас ищут, — если хотите видеть спрос и позиции.</p></div>
-    <div><span class="l-num">2</span><h3>Пара минут</h3><p class="muted">Обходим до 50 страниц так, как их видит поисковый робот, и собираем данные поиска.</p></div>
-    <div><span class="l-num">3</span><h3>Отчёт и наблюдение</h3><p class="muted">Отчёт на экране и в PDF. Дальше — позиции каждую ночь и письмо раз в неделю о том, что изменилось.</p></div>
+    <div><span class="l-num">01</span><h3>Введите адрес</h3><p class="muted">И запросы, по которым вас ищут, — если хотите видеть спрос и позиции.</p></div>
+    <div><span class="l-num">02</span><h3>Пара минут</h3><p class="muted">Обходим до 50 страниц так, как их видит поисковый робот, и собираем данные поиска.</p></div>
+    <div><span class="l-num">03</span><h3>Отчёт и наблюдение</h3><p class="muted">Отчёт на экране и в PDF. Дальше — позиции каждую ночь и письмо раз в неделю о том, что изменилось.</p></div>
   </div>
 </section>
 
 <section class="l-section">
-  <h2 class="l-h2">Тарифы</h2>
+  <p class="l-kick">05 / 06</p>
+  <h2 class="l-h2">Тарифы <span class="acc">и&nbsp;лимиты</span></h2>
   <div class="plans">
     {% for t in plans %}
     <div class="plan"><h3>{{ t.title }}</h3>
@@ -104,7 +109,8 @@
 </section>
 
 <section class="l-section l-faq">
-  <h2 class="l-h2">Вопросы</h2>
+  <p class="l-kick">06 / 06</p>
+  <h2 class="l-h2">Частые <span class="acc">вопросы</span></h2>
   <details><summary>Гарантируете выход в топ?</summary>
     <p>Нет — честно этого не может обещать никто. Мы показываем, что мешает сайту и что даст каждый шаг, по данным, измеренным в день проверки.</p></details>
   <details><summary>Нужен доступ к сайту или счётчику?</summary>
@@ -118,7 +124,8 @@
 </section>
 
 <footer class="l-foot">
-  <span>© yaSEO, 2026. Независимый сервис, не связан с ООО «Яндекс».</span>
+  <span class="wordmark" aria-hidden="true">yaseo</span>
+  <span>© yaseo, 2026. Независимый сервис, не связан с ООО «Яндекс».</span>
   <span><a href="/legal/offer">Оферта</a> · <a href="/legal/privacy">Обработка персональных данных</a></span>
 </footer>
 </div>

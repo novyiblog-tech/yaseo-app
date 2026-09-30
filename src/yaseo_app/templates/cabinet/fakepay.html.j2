@@ -4,7 +4,7 @@
 <div class="auth card">
   <div class="note fake">Это виртуальный платёжный сервис. На его месте будет страница ЮKassa или CloudPayments.</div>
   <h1 style="margin-top:18px">{{ pay.amount_rub|rub }}</h1>
-  <p class="muted">yaSEO · тариф «{{ pay.title }}»</p>
+  <p class="muted">yaseo · тариф «{{ pay.title }}»</p>
   {% if row.status == 'pending' %}
   <form method="post" style="margin-top:22px;display:grid;gap:10px">
     <input type="hidden" name="csrf" value="{{ user.csrf }}">

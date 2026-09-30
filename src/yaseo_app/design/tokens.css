@@ -1,16 +1,17 @@
-/* yaSEO — дизайн-система, токены. Один акцент — кислотный лайм. Две темы:
-   тёмная для кабинета и лендинга, светлая кремовая для отчёта и PDF.
-   Шрифт — временный (Manrope), заменится на фирменный одним токеном. */
+/* yaseo — дизайн-система, токены. Один акцент — кислотный лайм. Две темы:
+   тёмная для кабинета и лендинга, светлая нейтральная для отчёта и PDF.
+   Заголовки и знак — сверхжирный геометрический гротеск (Montserrat 800–900),
+   текст — Manrope. */
 
 :root {
-  --font-display: "Manrope", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Montserrat", "Helvetica Neue", Arial, sans-serif;
   --font-text: "Manrope", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
 
   --lime: #c8ff00;
   --lime-ink: #1a2400;          /* текст поверх лайма */
   --black: #0a0a0a;
-  --cream: #f3efe6;
+  --paper: #f4f4f1;
 
   /* светофоры — не спорят с акцентом */
   --ok: #1f9d55;
@@ -18,8 +19,9 @@
   --bad: #d7383e;
   --none: #8e8e8e;
 
-  --radius: 6px;
-  --radius-lg: 14px;
+  --radius: 10px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
   --gap: 8px;
   --measure: 68ch;
 
@@ -36,9 +38,11 @@
 /* тёмная тема: кабинет, лендинг */
 [data-theme="dark"] {
   --bg: var(--black);
-  --surface: #141414;
-  --surface-2: #1d1d1d;
-  --line: #2a2a2a;
+  --surface: #131313;
+  --surface-2: #1c1c1c;
+  --line: #262626;
+  --glass: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015));
+  --glow: 0 0 0 1px rgba(200,255,0,0.55), 0 0 24px rgba(200,255,0,0.25), inset 0 0 18px rgba(200,255,0,0.08);
   --ink: #f2f2f2;
   --ink-2: #a3a3a3;
   --ink-3: #6b6b6b;
@@ -48,10 +52,10 @@
 
 /* светлая тема: отчёт, PDF */
 [data-theme="light"] {
-  --bg: var(--cream);
-  --surface: #fffdf8;
-  --surface-2: #ebe6da;
-  --line: #d9d3c4;
+  --bg: var(--paper);
+  --surface: #ffffff;
+  --surface-2: #ecece8;
+  --line: #dcdcd7;
   --ink: #111111;
   --ink-2: #5b5b5b;
   --ink-3: #8a8a8a;

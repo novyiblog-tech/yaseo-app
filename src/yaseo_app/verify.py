@@ -83,7 +83,7 @@ def send_confirmation(conn: psycopg.Connection, user: dict) -> bool:
     if token is None:
         return False
     html, text = _render("confirm", link=f"{_base()}/confirm?t={token}")
-    mid = mailer.queue(conn, user, "yaSEO: подтвердите почту", html, text, "confirm")
+    mid = mailer.queue(conn, user, "yaseo: подтвердите почту", html, text, "confirm")
     mailer.send_one(conn, mid)
     return True
 
@@ -114,7 +114,7 @@ def request_reset(conn: psycopg.Connection, email: str) -> None:
     if token is None:
         return
     html, text = _render("reset", link=f"{_base()}/reset?t={token}")
-    mid = mailer.queue(conn, user, "yaSEO: новый пароль", html, text, "reset")
+    mid = mailer.queue(conn, user, "yaseo: новый пароль", html, text, "reset")
     mailer.send_one(conn, mid)
 
 

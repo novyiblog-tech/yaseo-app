@@ -118,12 +118,12 @@ def send_invites(conn: psycopg.Connection, limit: int, uses: int = 1,
         conn.execute(
             "INSERT INTO outbox (to_email, subject, html, text, kind, dedupe_key)"
             " VALUES (%s, %s, %s, %s, 'invite', %s) ON CONFLICT (dedupe_key) DO NOTHING",
-            (w["email"], "yaSEO: приглашение в закрытую бету", html, text, f"invite:{w['id']}"))
+            (w["email"], "yaseo: приглашение в закрытую бету", html, text, f"invite:{w['id']}"))
     return len(rows)
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Закрытая бета yaSEO")
+    parser = argparse.ArgumentParser(description="Закрытая бета yaseo")
     sub = parser.add_subparsers(dest="cmd", required=True)
     inv = sub.add_parser("invite", help="выпустить коды")
     inv.add_argument("--count", type=int, default=1)

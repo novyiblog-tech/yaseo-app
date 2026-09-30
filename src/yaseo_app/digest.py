@@ -73,7 +73,7 @@ def render(user: dict, data: dict) -> tuple[str, str, str]:
     downs = sum(len(s["down"]) for s in data["sites"])
     # Без склонений по числу: «позиции: выросли 1, просели 4» читается при любом числе.
     parts = [f"выросли {ups}"] * bool(ups) + [f"просели {downs}"] * bool(downs)
-    subject = "yaSEO за неделю — " + ("позиции: " + ", ".join(parts) if parts
+    subject = "yaseo за неделю — " + ("позиции: " + ", ".join(parts) if parts
                                       else "что нового на сайтах")
     return subject, html, text
 

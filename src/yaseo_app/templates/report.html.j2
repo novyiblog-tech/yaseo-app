@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>yaSEO — проверка {{ host }}</title>
+<title>yaseo — проверка {{ host }}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
 <style>
 {{ css|safe }}
 </style>
@@ -15,7 +15,7 @@
 
 <header class="head">
   <div>
-    <div class="wordmark">ya<b>SEO</b></div>
+    <div class="wordmark">yaseo</div>
     <h1 style="margin-top:14px">Проверка сайта {{ host }}</h1>
     <p class="muted" style="margin-top:6px">{{ kind }}</p>
   </div>
@@ -63,7 +63,7 @@
           <div><span>Кто</span>{{ s.who }}</div>
           <div><span>Время</span>{{ s.time }}</div>
           <div><span>Где</span>{{ s.pages }} {{ s.pages|pages_word }}</div>
-          <div><span>Важность</span><span class="tag {{ {'critical':'bad','major':'warn','minor':'quiet'}[s.severity] }}" style="display:inline-block">{{ {'critical':'срочно','major':'важно','minor':'мелочь'}[s.severity] }}</span></div>
+          <div><span>Важность</span><span class="tag {{ {'critical':'bad','major':'warn','minor':'quiet'}[s.severity] }}">{{ {'critical':'срочно','major':'важно','minor':'мелочь'}[s.severity] }}</span></div>
         </div>
         <div class="evidence"><span class="muted">Доказательство:</span> <span class="mono">{{ s.urls[0]|short }}</span> — {{ s.evidence }}</div>
         {% if s.effect %}<p class="small muted" style="margin-top:10px">Что изменится: {{ s.effect }}</p>{% endif %}
@@ -153,7 +153,7 @@
 </section>
 
 <footer class="foot">
-  <span>yaSEO · движок yaseo {{ engine }}</span>
+  <span>yaseo · движок {{ engine }}</span>
   <span>{{ collected_at }}</span>
 </footer>
 
