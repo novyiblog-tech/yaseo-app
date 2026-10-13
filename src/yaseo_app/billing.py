@@ -344,10 +344,21 @@ class TBankProvider(Provider):
                 "bank_status": st}
 
 
+class OffProvider(Provider):
+    """Боевой сервер без подключённой оплаты: виртуальная оплата выдавала бы тариф даром.
+    Покупка отказывает до создания платежа; напоминания и закрытие сроков работают."""
+    name = "off"
+
+    def charge(self, payment, method):
+        raise RuntimeError("оплата не подключена")
+
+
 def provider(conn: psycopg.Connection) -> Provider:
     name = os.environ.get("YASEO_PAYMENTS", "fake")
     if name == "fake":
         return FakeProvider(conn)
+    if name == "off":
+        return OffProvider()
     if name == "tbank":
         prov = TBankProvider(conn)
         # Тестовый терминал: денег нет, реквизиты оферты не нужны.
@@ -435,6 +446,8 @@ def start_purchase(conn: psycopg.Connection, user: dict, plan_code: str, prov: P
                    return_url: str, months: int = 1, auto_renew: bool = False) -> str:
     from yaseo_app import verify
     verify.require_confirmed(user)
+    if prov.name == "off":
+        raise Refused("Оплата ещё не подключена. Тарифы откроем в ближайшее время.")
     q = quote(conn, user, plan_code, months)
     pay = conn.execute(
         "INSERT INTO payments (user_id, plan, amount_rub, purpose, provider, idempotence_key,"

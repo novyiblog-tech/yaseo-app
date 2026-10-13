@@ -719,7 +719,8 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
                     cur=cur, use=billing.usage(c, user, cur), plans=billing.plans(c),
                     offers=billing.offers(c, user), period=billing.PERIOD,
                     payments=billing.payment_history(c, user),
-                    fake=isinstance(billing.provider(c), billing.FakeProvider), **extra)
+                    fake=os.environ.get("YASEO_PAYMENTS", "fake") == "fake",
+                    pay_off=os.environ.get("YASEO_PAYMENTS") == "off", **extra)
 
     @app.get("/billing")
     def billing_view(request: Request, user=Depends(current), c=Depends(conn)):

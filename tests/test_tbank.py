@@ -24,3 +24,13 @@ class TBankTest(PgTestCase):
             with mock.patch.object(p, "call", return_value={"Status": bank, "Amount": 129000}):
                 st = p.fetch("1")
             self.assertEqual((st["status"], str(st["amount"])), (ours, "1290"))
+
+
+class OffTest(PgTestCase):
+    def test_off_refuses_purchase_and_creates_no_payment(self):
+        from yaseo_app.accounts import Refused
+        u = self.user()
+        with self.assertRaises(Refused):
+            billing.start_purchase(self.conn, u, "start", billing.OffProvider(), "/r?p={payment}")
+        n = self.conn.execute("SELECT count(*) AS n FROM payments").fetchone()["n"]
+        self.assertEqual(n, 0)
