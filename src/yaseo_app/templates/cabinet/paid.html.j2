@@ -7,6 +7,10 @@
     <h1>Оплачено</h1>
     <p class="muted" style="margin-top:10px">Тариф «{{ plan.title }}» {{ 'продлён' if payment.purpose == 'renewal' else 'подключён' }}{% if sub %} до {{ sub.period_end|dt }}{% endif %}. Спасибо!</p>
     <p style="margin-top:18px"><a class="btn" href="/sites">К сайтам</a></p>
+  {% elif payment.status == 'refunded' %}
+    <h1>Платёж возвращён</h1>
+    <p class="muted" style="margin-top:10px">Деньги вернулись на карту, тариф отключён.</p>
+    <p style="margin-top:18px"><a class="btn ghost" href="/billing">К тарифам</a></p>
   {% elif payment.status == 'canceled' %}
     <h1>Оплата не прошла</h1>
     <p class="muted" style="margin-top:10px">Деньги не списаны. Можно попробовать ещё раз.</p>

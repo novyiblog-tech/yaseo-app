@@ -67,6 +67,27 @@ class BillingTest(PgTestCase):
         self.assertEqual(pay["status"], "canceled")
         self.assertEqual(self.plan_now(), "free")
 
+    def test_refund_switches_plan_off(self):
+        pid, _ = self.buy()
+        self.prov.refund(pid)
+        pay = billing.confirm(self.conn, self.prov, pid)
+        self.assertEqual(pay["status"], "refunded")
+        self.assertIsNotNone(pay["refunded_at"])
+        self.assertEqual(self.plan_now(), "free")
+        u = self.conn.execute("SELECT plan FROM users WHERE id = %s", (self.u["id"],)).fetchone()
+        self.assertEqual(u["plan"], "free")
+        billing.confirm(self.conn, self.prov, pid)  # повтор безопасен
+
+    def test_refund_of_renewal_takes_only_its_term(self):
+        self.buy()
+        end = self.sub()["period_end"]
+        pid, _ = self.buy()  # продление
+        self.assertEqual(self.sub()["period_end"], end + billing.PERIOD)
+        self.prov.refund(pid)
+        billing.confirm(self.conn, self.prov, pid)
+        self.assertEqual(self.sub()["period_end"], end)
+        self.assertEqual(self.plan_now(), "pro")
+
     def test_repeated_notification_does_not_extend_twice(self):
         pid, _ = self.buy()
         end = self.sub()["period_end"]

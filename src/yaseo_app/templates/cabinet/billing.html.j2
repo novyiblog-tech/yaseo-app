@@ -93,7 +93,7 @@
       <tbody>{% for x in payments %}
         <tr><td class="muted">{{ x.created_at|dt }}</td><td>{{ x.title }}{% if x.months > 1 %}, {{ x.months }} мес.{% endif %}</td>
           <td class="muted">{{ {'renewal': 'продление', 'upgrade': 'переход с зачётом ' ~ (x.credit_rub|rub)}.get(x.purpose, 'покупка') }}</td>
-          <td><span class="pill {{ {'succeeded': 'ok', 'pending': 'queued', 'canceled': 'failed'}[x.status] }}">{{ {'succeeded': 'оплачен', 'pending': 'ждёт оплаты', 'canceled': 'не прошёл'}[x.status] }}</span></td>
+          <td><span class="pill {{ {'succeeded': 'ok', 'pending': 'queued', 'canceled': 'failed', 'refunded': 'queued'}[x.status] }}">{{ {'succeeded': 'оплачен', 'pending': 'ждёт оплаты', 'canceled': 'не прошёл', 'refunded': 'возвращён'}[x.status] }}</span></td>
           <td class="num">{{ x.amount_rub|rub }}</td></tr>
       {% endfor %}</tbody>
     </table>

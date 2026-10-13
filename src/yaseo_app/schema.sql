@@ -304,6 +304,11 @@ CREATE TABLE IF NOT EXISTS waitlist (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS offer_version text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS offer_accepted_at timestamptz;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS offer_version text;
+-- Возврат денег: платёж был оплачен, банк его вернул (13.10.2026).
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS refunded_at timestamptz;
+ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_status_check;
+ALTER TABLE payments ADD CONSTRAINT payments_status_check
+    CHECK (status IN ('pending', 'succeeded', 'canceled', 'refunded'));
 
 -- Тарифы от 30.09.2026 — таблица «yaseo — тарифы и настройки», решение Сергея.
 -- Накатываются один раз (отметка в applied): дальше цифры правятся в базе, и выкладка

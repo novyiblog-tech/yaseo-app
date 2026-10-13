@@ -250,6 +250,10 @@ class FakeProvider(Provider):
         return self.conn.execute("SELECT * FROM fake_provider WHERE id = %s",
                                  (provider_id,)).fetchone()
 
+    def refund(self, provider_id: str) -> None:
+        self.conn.execute("UPDATE fake_provider SET status = 'refunded'"
+                          " WHERE id = %s AND status = 'succeeded'", (provider_id,))
+
     def decide(self, provider_id: str, pay: bool, method: str = "card_4242") -> None:
         self.conn.execute(
             "UPDATE fake_provider SET status = %s, method = %s"
@@ -265,7 +269,8 @@ class TBankProvider(Provider):
     API = "https://securepay.tinkoff.ru/v2/"
     # Статусы банка: https://developer.tbank.ru/eacq/api/get-state
     DONE = {"CONFIRMED"}
-    FAILED = {"REJECTED", "CANCELED", "DEADLINE_EXPIRED", "AUTH_FAIL", "REVERSED", "REFUNDED"}
+    FAILED = {"REJECTED", "CANCELED", "DEADLINE_EXPIRED", "AUTH_FAIL", "REVERSED"}
+    REFUNDED = {"REFUNDED"}  # PARTIAL_REFUNDED тариф не отключает: часть денег осталась
 
     def __init__(self, conn: psycopg.Connection, terminal: str | None = None,
                  password: str | None = None):
@@ -333,7 +338,8 @@ class TBankProvider(Provider):
     def fetch(self, provider_id):
         out = self.call("GetState", {"PaymentId": provider_id})
         st = out.get("Status", "")
-        status = "succeeded" if st in self.DONE else "canceled" if st in self.FAILED else "pending"
+        status = ("succeeded" if st in self.DONE else "refunded" if st in self.REFUNDED
+                  else "canceled" if st in self.FAILED else "pending")
         return {"status": status, "method": None, "amount": Decimal(out["Amount"]) / 100,
                 "bank_status": st}
 
@@ -444,15 +450,26 @@ def start_purchase(conn: psycopg.Connection, user: dict, plan_code: str, prov: P
 
 
 def confirm(conn: psycopg.Connection, prov: Provider, provider_id: str) -> dict | None:
-    """Сверить платёж с сервисом и, если оплачен, включить тариф. Повтор безопасен."""
+    """Сверить платёж с сервисом и, если оплачен, включить тариф; если оплаченный платёж
+    вернули — отключить. Повтор безопасен."""
     with conn.transaction():
         pay = conn.execute("SELECT * FROM payments WHERE provider_id = %s AND provider = %s"
                            " FOR UPDATE", (provider_id, prov.name)).fetchone()
         if pay is None:
             return None
+        if pay["status"] == "succeeded":
+            try:
+                state = prov.fetch(provider_id)
+            except Exception:  # сервис недоступен — оставляем как есть, проверим в следующий раз
+                return pay
+            if state["status"] == "refunded":
+                return _refund(conn, pay)
+            return pay
         if pay["status"] != "pending":
             return pay
         state = prov.fetch(provider_id)
+        if state["status"] == "refunded":  # оплатили и вернули, пока мы не смотрели
+            state["status"] = "canceled"
         if state["status"] == "succeeded" and state.get("amount") is not None \
                 and Decimal(state["amount"]) != Decimal(pay["amount_rub"]):
             raise ValueError(f"сумма платежа {provider_id} у сервиса {state['amount']} "
@@ -466,6 +483,29 @@ def confirm(conn: psycopg.Connection, prov: Provider, provider_id: str) -> dict 
                 (state["status"], state["status"], pay["id"]),
             ).fetchone()
         return pay
+
+
+def _refund(conn: psycopg.Connection, pay: dict) -> dict:
+    """Деньги вернули: платёж помечается, тариф отключается. Продление отнимает только свой
+    срок. Если после этого платежа уже была другая оплата, срок не трогаем."""
+    pay = conn.execute("UPDATE payments SET status = 'refunded', refunded_at = now()"
+                       " WHERE id = %s RETURNING *", (pay["id"],)).fetchone()
+    later = conn.execute("SELECT 1 FROM payments WHERE user_id = %s AND status = 'succeeded'"
+                         " AND id > %s", (pay["user_id"], pay["id"])).fetchone()
+    sub = subscription(conn, pay["user_id"])
+    if later or sub is None or sub["plan"] != pay["plan"] or sub["status"] == "canceled":
+        return pay
+    shorter = conn.execute("SELECT %s::timestamptz - %s::interval AS t",
+                           (sub["period_end"], PERIOD * pay["months"])).fetchone()["t"]
+    if pay["purpose"] == "renewal" and shorter > sub["period_start"]:
+        conn.execute("UPDATE subscriptions SET period_end = %s, updated_at = now()"
+                     " WHERE user_id = %s", (shorter, pay["user_id"]))
+    else:
+        conn.execute("UPDATE subscriptions SET status = 'canceled', auto_renew = false,"
+                     " period_end = least(period_end, now()), updated_at = now()"
+                     " WHERE user_id = %s", (pay["user_id"],))
+        conn.execute("UPDATE users SET plan = 'free' WHERE id = %s", (pay["user_id"],))
+    return pay
 
 
 def _activate(conn: psycopg.Connection, pay: dict, method: str | None) -> None:
