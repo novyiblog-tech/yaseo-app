@@ -775,13 +775,15 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
             raise HTTPException(status_code=400)
         if not isinstance(body, dict):
             raise HTTPException(status_code=400)
-        pid = str((body.get("object") or {}).get("id") or body.get("id") or "")
+        pid = str((body.get("object") or {}).get("id") or body.get("PaymentId")
+                  or body.get("id") or "")
         with request.app.state.pool.connection() as c:
             prov = billing.provider(c)
             if prov.name != name or not pid:
                 raise HTTPException(status_code=404)
             billing.confirm(c, prov, pid)
-        return Response(status_code=200)
+        # Т-Банк повторяет уведомление, пока не получит ровно «OK».
+        return Response("OK", media_type="text/plain")
 
     # виртуальная страница оплаты — вместо чужого сервиса, только в режиме fake
     def fake_prov(c) -> billing.FakeProvider:

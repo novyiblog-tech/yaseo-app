@@ -15,6 +15,15 @@
         "YASEO_APP_DSN=dbname=yaseo_app YASEO_ALLOW_PRIVATE=1 YASEO_INSECURE_COOKIES=1 YASEO_SOURCES=fake exec uv run uvicorn yaseo_app.web:app --host 127.0.0.1 --port 8011"
       ],
       "port": 8011
+    },
+    {
+      "name": "web-tbank",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "set -a; . ./.env.tbank; set +a; YASEO_APP_DSN=dbname=yaseo_app YASEO_ALLOW_PRIVATE=1 YASEO_INSECURE_COOKIES=1 YASEO_SOURCES=fake exec uv run uvicorn yaseo_app.web:app --host 127.0.0.1 --port 8012"
+      ],
+      "port": 8012
     }
   ]
 }

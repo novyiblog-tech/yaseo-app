@@ -24,8 +24,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import secrets
+import ssl
+import urllib.request
 from datetime import timedelta
 from decimal import ROUND_FLOOR, Decimal
 
@@ -253,10 +257,96 @@ class FakeProvider(Provider):
             ("succeeded" if pay else "canceled", method if pay else None, provider_id))
 
 
+class TBankProvider(Provider):
+    """Т-Банк Эквайринг, платёжная форма банка (без PCI DSS): Init -> редирект на PaymentURL ->
+    GetState. Тестовый терминал (ключ оканчивается на DEMO) работает на том же хосте.
+    Автопродление (Recurrent/RebillId) пока не подключено: charge не реализован."""
+    name = "tbank"
+    API = "https://securepay.tinkoff.ru/v2/"
+    # Статусы банка: https://developer.tbank.ru/eacq/api/get-state
+    DONE = {"CONFIRMED"}
+    FAILED = {"REJECTED", "CANCELED", "DEADLINE_EXPIRED", "AUTH_FAIL", "REVERSED", "REFUNDED"}
+
+    def __init__(self, conn: psycopg.Connection, terminal: str | None = None,
+                 password: str | None = None):
+        self.conn = conn
+        self.terminal = terminal or os.environ.get("YASEO_TBANK_TERMINAL", "")
+        self.password = password or os.environ.get("YASEO_TBANK_PASSWORD", "")
+        if not self.terminal or not self.password:
+            raise ValueError("Т-Банк: не заданы YASEO_TBANK_TERMINAL и YASEO_TBANK_PASSWORD")
+
+    @property
+    def demo(self) -> bool:
+        return self.terminal.endswith("DEMO")
+
+    def token(self, fields: dict) -> str:
+        """SHA-256 от значений корневых полей и пароля в порядке имён полей; вложенные не берём."""
+        flat = {k: v for k, v in fields.items() if not isinstance(v, (dict, list)) and v is not None}
+        flat["Password"] = self.password
+        joined = "".join(("true" if flat[k] is True else "false" if flat[k] is False else str(flat[k]))
+                         for k in sorted(flat))
+        return hashlib.sha256(joined.encode("utf-8")).hexdigest()
+
+    def call(self, method: str, fields: dict) -> dict:
+        body = {"TerminalKey": self.terminal, **fields}
+        body["Token"] = self.token(body)
+        req = urllib.request.Request(self.API + method, json.dumps(body).encode("utf-8"),
+                                     {"Content-Type": "application/json"})
+        # Банк выпускает сертификат в корне Минцифры: на сервере его может не быть в системном
+        # хранилище — тогда путь к файлу корня в YASEO_TBANK_CA.
+        ctx = ssl.create_default_context(cafile=os.environ.get("YASEO_TBANK_CA") or None)
+        with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+            out = json.loads(resp.read())
+        if not out.get("Success"):
+            raise ValueError(f"Т-Банк {method}: {out.get('ErrorCode')} {out.get('Message')} "
+                             f"{out.get('Details') or ''}".strip())
+        return out
+
+    def _receipt(self, payment: dict, kopecks: int) -> dict | None:
+        taxation = os.environ.get("YASEO_TBANK_TAXATION")  # usn_income и т. п.; пусто — без чека
+        if not taxation:
+            return None
+        user = self.conn.execute("SELECT email FROM users WHERE id = %s",
+                                 (payment["user_id"],)).fetchone()
+        title = self.conn.execute("SELECT title FROM plans WHERE code = %s",
+                                  (payment["plan"],)).fetchone()["title"]
+        return {"Email": user["email"], "Taxation": taxation,
+                "Items": [{"Name": f"yaSEO, тариф «{title}»"[:128], "Price": kopecks,
+                           "Quantity": 1, "Amount": kopecks,
+                           "Tax": os.environ.get("YASEO_TBANK_TAX", "none"),
+                           "PaymentMethod": "full_payment", "PaymentObject": "service"}]}
+
+    def create(self, payment, return_url):
+        kopecks = int((Decimal(payment["amount_rub"]) * 100).to_integral_value())
+        base = os.environ.get("YASEO_BASE_URL", "http://127.0.0.1:8000")
+        fields = {"Amount": kopecks, "OrderId": f"yaseo-{payment['id']}",
+                  "Description": "Оплата тарифа yaSEO",
+                  "SuccessURL": return_url, "FailURL": return_url,
+                  "NotificationURL": f"{base}/pay/webhook/tbank",
+                  "DATA": {"OperationInitiatorType": "0"}}
+        receipt = self._receipt(payment, kopecks)
+        if receipt:
+            fields["Receipt"] = receipt
+        out = self.call("Init", fields)
+        return str(out["PaymentId"]), out["PaymentURL"]
+
+    def fetch(self, provider_id):
+        out = self.call("GetState", {"PaymentId": provider_id})
+        st = out.get("Status", "")
+        status = "succeeded" if st in self.DONE else "canceled" if st in self.FAILED else "pending"
+        return {"status": status, "method": None, "amount": Decimal(out["Amount"]) / 100,
+                "bank_status": st}
+
+
 def provider(conn: psycopg.Connection) -> Provider:
     name = os.environ.get("YASEO_PAYMENTS", "fake")
     if name == "fake":
         return FakeProvider(conn)
+    if name == "tbank":
+        prov = TBankProvider(conn)
+        # Тестовый терминал: денег нет, реквизиты оферты не нужны.
+        if prov.demo or legal.complete():
+            return prov
     if not legal.complete():
         # Настоящие деньги — только когда в оферте есть реквизиты исполнителя.
         raise ValueError("реквизиты оферты не заполнены: "
@@ -363,6 +453,10 @@ def confirm(conn: psycopg.Connection, prov: Provider, provider_id: str) -> dict 
         if pay["status"] != "pending":
             return pay
         state = prov.fetch(provider_id)
+        if state["status"] == "succeeded" and state.get("amount") is not None \
+                and Decimal(state["amount"]) != Decimal(pay["amount_rub"]):
+            raise ValueError(f"сумма платежа {provider_id} у сервиса {state['amount']} "
+                             f"не совпадает с нашей {pay['amount_rub']}")
         if state["status"] == "succeeded":
             _activate(conn, pay, state.get("method"))
         if state["status"] != "pending":
