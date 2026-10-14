@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import hmac
 import json
 import os
 import secrets
@@ -210,6 +211,10 @@ class Provider:
         """Списание сохранённым способом без участия человека (автопродление)."""
         raise NotImplementedError
 
+    def saved_method(self, payment: dict) -> str | None:
+        """Сохранённый способ оплаты покупателя, если сервис не прислал его сам."""
+        return None
+
 
 class FakeProvider(Provider):
     """Виртуальный платёжный сервис: своя таблица вместо чужого сервера.
@@ -327,21 +332,68 @@ class TBankProvider(Provider):
         fields = {"Amount": kopecks, "OrderId": f"yaseo-{payment['id']}",
                   "Description": "Оплата тарифа yaSEO",
                   "SuccessURL": return_url, "FailURL": return_url,
-                  "NotificationURL": f"{base}/pay/webhook/tbank",
-                  "DATA": {"OperationInitiatorType": "0"}}
+                  "NotificationURL": f"{base}/pay/webhook/tbank"}
+        if payment.get("auto_renew"):
+            # С согласия человека: банк сохранит карту и вернёт RebillId (CIT, первый платёж).
+            fields.update({"Recurrent": "Y", "CustomerKey": self.customer_key(payment),
+                           "OperationInitiatorType": "1"})
+        else:
+            fields["DATA"] = {"OperationInitiatorType": "0"}
         receipt = self._receipt(payment, kopecks)
         if receipt:
             fields["Receipt"] = receipt
         out = self.call("Init", fields)
         return str(out["PaymentId"]), out["PaymentURL"]
 
+    def _status(self, st: str) -> str:
+        return ("succeeded" if st in self.DONE else "refunded" if st in self.REFUNDED
+                else "canceled" if st in self.FAILED else "pending")
+
     def fetch(self, provider_id):
         out = self.call("GetState", {"PaymentId": provider_id})
         st = out.get("Status", "")
-        status = ("succeeded" if st in self.DONE else "refunded" if st in self.REFUNDED
-                  else "canceled" if st in self.FAILED else "pending")
-        return {"status": status, "method": None, "amount": Decimal(out["Amount"]) / 100,
-                "bank_status": st}
+        return {"status": self._status(st), "method": None,
+                "amount": Decimal(out["Amount"]) / 100, "bank_status": st}
+
+    @staticmethod
+    def customer_key(payment: dict) -> str:
+        return f"yaseo-{payment['user_id']}"
+
+    def notification_valid(self, body: dict) -> bool:
+        """Подпись уведомления банка: та же схема, что у запроса, поле Token не входит."""
+        token = body.get("Token")
+        if not isinstance(token, str) or body.get("TerminalKey") != self.terminal:
+            return False
+        rest = {k: v for k, v in body.items() if k != "Token"}
+        return hmac.compare_digest(token, self.token(rest))
+
+    def saved_method(self, payment):
+        """RebillId последней сохранённой карты покупателя (если уведомление не дошло)."""
+        out = self.call("GetCardList", {"CustomerKey": self.customer_key(payment)})
+        cards = out if isinstance(out, list) else out.get("Cards") or []
+        ids = [c.get("RebillId") for c in cards
+               if c.get("RebillId") and c.get("Status", "A") == "A"]
+        return str(ids[-1]) if ids else None
+
+    def charge(self, payment, method):
+        """Автопродление: новый платёж (Init) и списание с сохранённой карты (Charge)."""
+        kopecks = int((Decimal(payment["amount_rub"]) * 100).to_integral_value())
+        base = os.environ.get("YASEO_BASE_URL", "http://127.0.0.1:8000")
+        fields = {"Amount": kopecks, "OrderId": f"yaseo-{payment['id']}",
+                  "Description": "Продление тарифа yaSEO",
+                  "CustomerKey": self.customer_key(payment),
+                  "NotificationURL": f"{base}/pay/webhook/tbank",
+                  "OperationInitiatorType": "R"}
+        receipt = self._receipt(payment, kopecks)
+        if receipt:
+            fields["Receipt"] = receipt
+        pid = str(self.call("Init", fields)["PaymentId"])
+        out = self.call("Charge", {"PaymentId": pid, "RebillId": method})
+        status = self._status(out.get("Status", ""))
+        if status == "pending":
+            status = self.fetch(pid)["status"]
+        return pid, {"status": status, "method": method,
+                     "error": None if status == "succeeded" else f"Т-Банк: {out.get('Status')}"}
 
 
 class OffProvider(Provider):
@@ -488,7 +540,13 @@ def confirm(conn: psycopg.Connection, prov: Provider, provider_id: str) -> dict 
             raise ValueError(f"сумма платежа {provider_id} у сервиса {state['amount']} "
                              f"не совпадает с нашей {pay['amount_rub']}")
         if state["status"] == "succeeded":
-            _activate(conn, pay, state.get("method"))
+            method = state.get("method") or pay.get("payment_method")
+            if not method and pay["auto_renew"]:
+                try:
+                    method = prov.saved_method(pay)
+                except Exception:  # без карты автопродление просто не включится
+                    method = None
+            _activate(conn, pay, method)
         if state["status"] != "pending":
             pay = conn.execute(
                 "UPDATE payments SET status = %s, paid_at = CASE WHEN %s = 'succeeded'"
@@ -496,6 +554,19 @@ def confirm(conn: psycopg.Connection, prov: Provider, provider_id: str) -> dict 
                 (state["status"], state["status"], pay["id"]),
             ).fetchone()
         return pay
+
+
+def save_method(conn: psycopg.Connection, prov: Provider, provider_id: str, method: str) -> None:
+    """Сервис прислал сохранённый способ оплаты (RebillId). Берём его только из проверенного
+    уведомления. Если платёж уже включил тариф, способ уходит и в подписку."""
+    with conn.transaction():
+        pay = conn.execute(
+            "UPDATE payments SET payment_method = %s WHERE provider = %s AND provider_id = %s"
+            " AND auto_renew RETURNING *", (method, prov.name, provider_id)).fetchone()
+        if pay and pay["status"] == "succeeded":
+            conn.execute("UPDATE subscriptions SET payment_method = %s, updated_at = now()"
+                         " WHERE user_id = %s AND plan = %s AND status <> 'canceled'",
+                         (method, pay["user_id"], pay["plan"]))
 
 
 def _refund(conn: psycopg.Connection, pay: dict) -> dict:

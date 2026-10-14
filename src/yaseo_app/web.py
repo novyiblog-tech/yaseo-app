@@ -782,6 +782,12 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
             prov = billing.provider(c)
             if prov.name != name or not pid:
                 raise HTTPException(status_code=404)
+            if prov.name == "tbank":
+                # Банк подписывает уведомление; RebillId берём только из проверенного.
+                if not prov.notification_valid(body):
+                    raise HTTPException(status_code=400)
+                if body.get("RebillId"):
+                    billing.save_method(c, prov, pid, str(body["RebillId"]))
             billing.confirm(c, prov, pid)
         # Т-Банк повторяет уведомление, пока не получит ровно «OK».
         return Response("OK", media_type="text/plain")
