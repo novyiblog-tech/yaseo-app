@@ -307,6 +307,8 @@ class TBankProvider(Provider):
         ctx = ssl.create_default_context(cafile=os.environ.get("YASEO_TBANK_CA") or None)
         with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
             out = json.loads(resp.read())
+        if isinstance(out, list):  # GetCardList отвечает списком карт
+            return out
         if not out.get("Success"):
             raise ValueError(f"Т-Банк {method}: {out.get('ErrorCode')} {out.get('Message')} "
                              f"{out.get('Details') or ''}".strip())
