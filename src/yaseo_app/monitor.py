@@ -113,10 +113,10 @@ def run_positions(conn: psycopg.Connection, job: dict, user: dict,
         except Blocked as exc:
             reason = str(exc)
             break
-        except sources.SourceError:
+        except sources.SourceError as exc:
             errors += 1
             if errors >= pipeline.MAX_ERRORS_IN_ROW and not checked:
-                reason = "поставщик не отвечает"
+                reason = f"поставщик не отвечает: {str(exc)[:300]}"
                 break
             continue
         ours = [d for d in data["docs"] if sources.same_site(d["domain"], domain)]
