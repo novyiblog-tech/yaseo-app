@@ -22,7 +22,7 @@ finmodel = ["openpyxl>=3.1"]
 [tool.uv.sources]
 # Движок ставится пакетом на закреплённом теге. Правки движка идут в его репозиторий,
 # сюда — только подъём тега.
-yaseo = { git = "https://github.com/novyiblog-tech/yaseo", tag = "v0.1.5" }
+yaseo = { git = "https://github.com/novyiblog-tech/yaseo", tag = "v0.1.6" }
 
 [build-system]
 requires = ["hatchling"]
