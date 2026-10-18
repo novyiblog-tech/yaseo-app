@@ -682,7 +682,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
             raise HTTPException(status_code=404)
         return HTMLResponse(_report_html(c, user, job))
 
-    def _report_html(c, user, job, back: bool = True) -> str:
+    def _report_html(c, user, job, back: bool = True, expand: bool = False) -> str:
         free = job["result"]["free"]
         a = score.assess(free)
         shown = billing.current(c, user)["plan"]["steps_shown"]
@@ -690,7 +690,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
             a.steps = a.steps[:shown]
         return report.render(free, a, max_pages=job["params"].get("max_pages", 20),
                              back_url=f"/jobs/{job['id']}" if back else None,
-                             brand=prefs.brand(c, user))
+                             brand=prefs.brand(c, user), expand=expand)
 
     @app.get("/jobs/{job_id}/report.pdf")
     def job_pdf(job_id: int, user=Depends(current), c=Depends(conn)):
@@ -701,7 +701,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
             raise HTTPException(status_code=403, detail="PDF отчёта — в платных тарифах.")
         with tempfile.TemporaryDirectory(prefix="yaseo-pdf-") as tmp:
             src, out = Path(tmp) / "report.html", Path(tmp) / "report.pdf"
-            src.write_text(_report_html(c, user, job), encoding="utf-8")
+            src.write_text(_report_html(c, user, job, expand=True), encoding="utf-8")
             subprocess.run([str(RENDER), "pdf", str(src), str(out)], capture_output=True,
                            timeout=90)
             if not out.exists() or out.stat().st_size == 0:

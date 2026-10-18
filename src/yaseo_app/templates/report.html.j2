@@ -126,6 +126,8 @@
 <section>
   <div class="sec-head"><span class="n">05</span><h2>Техника по страницам</h2></div>
   <p class="muted" style="margin-bottom:16px">Для специалиста: что увидел робот на каждой проверенной странице.</p>
+  <details class="fold"{% if expand %} open{% endif %}>
+  <summary>Таблица страниц <span class="muted">— {{ pages|length }}</span></summary>
   <table>
     <tr><th>Страница</th><th>Код</th><th class="num">Заголовок</th><th class="num">Описание</th><th class="num">H1</th><th>Основной адрес</th><th class="num">Слов</th><th class="num">Картинок без подписи</th></tr>
     {% for p in pages %}
@@ -141,8 +143,10 @@
     </tr>
     {% endfor %}
   </table>
+  </details>
 
-  <h3 style="margin:28px 0 10px">Все находки — {{ issues|length }}</h3>
+  <details class="fold"{% if expand %} open{% endif %}>
+  <summary>Все находки <span class="muted">— {{ issues|length }}</span></summary>
   <div class="issues">
     {% for i in issues %}
     <div class="issue">
@@ -151,6 +155,7 @@
     </div>
     {% endfor %}
   </div>
+  </details>
 </section>
 
 <section>

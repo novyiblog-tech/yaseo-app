@@ -136,3 +136,12 @@ tr.bad td { color: var(--bad); }
   .issue { grid-template-columns: 1fr; gap: 4px; }
   table { display: block; overflow-x: auto; }
 }
+
+/* Длинные списки техники — сворачиваются, в PDF раскрыты (expand) */
+.fold { border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; }
+.fold > summary { cursor: pointer; padding: 12px 16px; font-weight: 600; list-style: none; display: flex; gap: 8px; align-items: center; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: "▸"; transition: transform .15s; }
+.fold[open] > summary::before { transform: rotate(90deg); }
+.fold > table, .fold > .issues { margin: 0; padding: 0 16px 12px; }
+@media print { .fold > summary::before { content: none; } }
