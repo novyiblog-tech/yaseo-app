@@ -105,3 +105,39 @@ class PipelineTest(PgTestCase):
         self.assertEqual(r["paid"]["answers"]["status"], "failed")
         self.assertEqual(r["spend"]["by_source"]["yandex-gen"]["calls"],
                          pipeline.MAX_ERRORS_IN_ROW)
+
+
+class LiveWindowTest(PipelineTest):
+    """Живые источники для кабинета из списка — только в ночном окне, остальным виртуальные."""
+
+    def _enqueue(self, email):
+        u = self.user(email, "free")
+        return jobs.enqueue(self.conn, u["id"], "audit",
+                            {"url": self.url, "max_pages": 5, "queries": QUERIES})
+
+    def test_window_math(self):
+        from datetime import datetime, timedelta, timezone
+        msk = timezone(timedelta(hours=3))
+        self.assertEqual(worker.until_window(datetime(2026, 10, 20, 2, 0, tzinfo=msk)), timedelta(0))
+        self.assertEqual(worker.until_window(datetime(2026, 10, 19, 22, 30, tzinfo=msk)),
+                         timedelta(hours=1, minutes=30))
+
+    def test_daytime_job_of_live_user_waits(self):
+        from datetime import timedelta
+        from unittest import mock
+        jid = self._enqueue(f"live-{secrets.token_hex(3)}@t")
+        email = self.conn.execute("SELECT u.email FROM jobs j JOIN users u ON u.id = j.user_id"
+                                  " WHERE j.id = %s", (jid,)).fetchone()["email"]
+        with mock.patch.object(worker, "until_window", return_value=timedelta(hours=5)):
+            worker.run_once(self.conn, "w-test", sources.build("fake"), allow_private=True,
+                            live={"x": object()}, live_users={email})
+        job = self.conn.execute("SELECT * FROM jobs WHERE id = %s", (jid,)).fetchone()
+        self.assertEqual(job["status"], "queued")
+        self.assertIn("ночном окне", job["error"])
+
+    def test_other_users_unaffected(self):
+        jid = self._enqueue(f"plain-{secrets.token_hex(3)}@t")
+        worker.run_once(self.conn, "w-test", sources.build("fake"), allow_private=True,
+                        live={"x": object()}, live_users={"other@t"})
+        self.assertEqual(self.conn.execute("SELECT status FROM jobs WHERE id = %s",
+                                           (jid,)).fetchone()["status"], "done")

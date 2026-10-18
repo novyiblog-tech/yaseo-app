@@ -4,6 +4,9 @@
     python -m yaseo_app.worker --once           # одна задача и выход
     python -m yaseo_app.worker --sources live   # настоящие поставщики, ключи из .env
 
+YASEO_LIVE_EMAILS=a@b.ru — при --sources fake эти кабинеты работают на живых данных
+(только ночью, 00:00–06:00 МСК), остальные остаются на виртуальных.
+
 Ключи читаются из окружения и файла .env и передаются источникам словарём.
 В процесс бесплатного аудита они не попадают (free_audit.isolated_env).
 """
@@ -14,6 +17,7 @@ import logging
 import os
 import socket
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import psycopg
@@ -33,13 +37,42 @@ def load_keys(env_file: Path | None) -> dict[str, str]:
     return keys
 
 
+MSK = timezone(timedelta(hours=3))
+WINDOW_END_HOUR = 6  # окно отложенных запросов Search API: 00:00–06:00 МСК
+
+
+def until_window(now: datetime | None = None) -> timedelta:
+    """Сколько ждать начала ночного окна; 0 — окно открыто."""
+    now = (now or datetime.now(timezone.utc)).astimezone(MSK)
+    if now.hour < WINDOW_END_HOUR:
+        return timedelta(0)
+    midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return midnight - now
+
+
+def live_emails(raw: str | None = None) -> set[str]:
+    raw = os.environ.get("YASEO_LIVE_EMAILS", "") if raw is None else raw
+    return {e.strip().lower() for e in raw.replace(";", ",").split(",") if e.strip()}
+
+
 def run_once(conn: psycopg.Connection, worker_id: str, srcs: dict,
-             allow_private: bool = False) -> dict | None:
-    """Одна задача из очереди. Возвращает задачу или None, если очередь пуста."""
+             allow_private: bool = False, live: dict | None = None,
+             live_users: set[str] = frozenset()) -> dict | None:
+    """Одна задача из очереди. Возвращает задачу или None, если очередь пуста.
+
+    live + live_users: кабинеты из списка получают настоящих поставщиков, но только в
+    ночном окне; днём их задача ждёт в очереди до полуночи МСК. Остальные — srcs."""
     job = jobs.claim(conn, worker_id)
     if job is None:
         return None
     user = conn.execute("SELECT * FROM users WHERE id = %s", (job["user_id"],)).fetchone()
+    if live and user["email"].lower() in live_users:
+        wait = until_window()
+        if wait:
+            jobs.postpone(conn, job, wait, "живые данные — в ночном окне 00:00–06:00 МСК")
+            log.info("задача %s ждёт ночного окна: %s", job["id"], wait)
+            return job
+        srcs = live
     try:
         if job["kind"] == "audit":
             result = pipeline.run_audit(conn, job, user, srcs, allow_private=allow_private)
@@ -87,13 +120,21 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 
-    srcs = sources.build(args.sources, load_keys(args.env_file))
+    keys = load_keys(args.env_file)
+    srcs = sources.build(args.sources, keys)
+    users = live_emails()
+    live = None
+    if users and args.sources == "fake":
+        try:
+            live = sources.build("live", keys)
+        except ValueError as exc:  # без ключей живой режим не включаем, остальных не роняем
+            log.error("YASEO_LIVE_EMAILS задан, но живые источники недоступны: %s", exc)
     worker_id = f"{socket.gethostname()}:{os.getpid()}"
     conn = db.connect()
     db.migrate(conn)
     log.info("исполнитель %s, источники %s", worker_id, args.sources)
     while True:
-        job = run_once(conn, worker_id, srcs, args.allow_private)
+        job = run_once(conn, worker_id, srcs, args.allow_private, live, users)
         if args.once:
             return 0
         if job is None:
