@@ -1,11 +1,11 @@
 {% extends "cabinet/base.html.j2" %}
-{% block title %}Проверка {{ job.id }}{% endblock %}
+{% block title %}Проверка от {{ job.created_at|dt }}{% endblock %}
 {% block head %}{% if job.status in ('queued', 'running') %}<meta http-equiv="refresh" content="3">{% endif %}{% endblock %}
 {% block main %}
 <div class="stack">
   <div>
     <div class="crumbs"><a href="/sites">Сайты</a> / <a href="/sites/{{ job.site_id }}">{{ job.params.url }}</a> /</div>
-    <h1>Проверка №{{ job.id }} <span class="pill {{ job.status }}" style="vertical-align:middle">{{ STATUS_TITLES[job.status] }}</span></h1>
+    <h1>Проверка от {{ job.created_at|dt }} <span class="pill {{ job.status }}" style="vertical-align:middle">{{ STATUS_TITLES[job.status] }}</span></h1>
   </div>
 
   {% if job.status in ('queued', 'running') %}
@@ -89,7 +89,7 @@
 
   {% if diff %}
   <section class="card">
-    <h2>С прошлой проверки <a class="muted small" href="/jobs/{{ diff.prev_id }}">№{{ diff.prev_id }}</a></h2>
+    <h2>С прошлой проверки <a class="muted small" href="/jobs/{{ diff.prev_id }}">открыть</a></h2>
     <div class="diff-nums">
       <div><b class="{{ 'up' if (diff.score_delta or 0) > 0 else ('down' if (diff.score_delta or 0) < 0 else '') }}">{% if diff.score_delta is none %}—{% elif diff.score_delta > 0 %}+{{ diff.score_delta }}{% else %}{{ diff.score_delta }}{% endif %}</b>оценка</div>
       <div><b class="up">{{ diff.fixed_count }}</b>исправлено</div>
