@@ -509,8 +509,8 @@ wheels = [
 
 [[package]]
 name = "yaseo"
-version = "0.1.4"
-source = { git = "https://github.com/novyiblog-tech/yaseo?tag=v0.1.4#72188c0ca5ef175834afdeb807d038fe2701b9cc" }
+version = "0.1.5"
+source = { git = "https://github.com/novyiblog-tech/yaseo?tag=v0.1.5#f12e66e9962df3797992a68d1389fcc94401de8b" }
 
 [[package]]
 name = "yaseo-app"
@@ -542,7 +542,7 @@ requires-dist = [
     { name = "psycopg-pool", specifier = ">=3.3.3" },
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "uvicorn", specifier = ">=0.30" },
-    { name = "yaseo", git = "https://github.com/novyiblog-tech/yaseo?tag=v0.1.4" },
+    { name = "yaseo", git = "https://github.com/novyiblog-tech/yaseo?tag=v0.1.5" },
 ]
 
 [package.metadata.requires-dev]
