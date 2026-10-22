@@ -6,6 +6,25 @@
     <div class="crumbs"><a href="/sites">Сайты</a> /</div>
     <h1 style="text-transform:none">{{ site.url }}</h1>
   </div>
+  {% if running %}
+  <section class="card" id="running" aria-live="polite">
+    <h2>Проверка идёт</h2>
+    {% if progress.queued %}
+    <p>Проверка в очереди{% if progress.ahead %} — перед ней {{ progress.ahead }} {{ progress.ahead|plural('проверка', 'проверки', 'проверок') }}{% endif %}{% if running.error %} — {{ running.error }}{% endif %}. Начнётся автоматически.</p>
+    <div class="progress" aria-hidden="true"><i></i></div>
+    {% else %}
+    <div class="progress-head">
+      <p>Проверяем сайт{% if running.params.queries %} и собираем данные Яндекса{% endif %}.
+        {% if progress.over %}Почти готово, ещё немного.{% else %}Осталось примерно {{ progress.left }}.{% endif %}</p>
+      <span class="progress-pct">{{ progress.pct }}%</span>
+    </div>
+    <div class="progress known" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ progress.pct }}" style="--pct: {{ progress.pct }}%"><i></i></div>
+    {% endif %}
+    <p class="muted small" style="margin-top:12px">Блок обновляется сам. Остальным можно пользоваться, пока идёт проверка. <a href="/jobs/{{ running.id }}">Открыть страницу проверки</a></p>
+  </section>
+  {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+  <script src="/running.js" defer></script>
+  {% else %}
   <form class="card" method="post" action="/sites/{{ site.id }}/run">
     <input type="hidden" name="csrf" value="{{ user.csrf }}">
     <h2>Новая проверка</h2>
@@ -20,6 +39,7 @@
     <p style="margin-top:18px"><button class="btn" type="submit">Запустить проверку</button></p>
     {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
   </form>
+  {% endif %}
   <section class="card table-scroll" id="positions">
     <h2>Место в Яндексе — каждый день</h2>
     <p class="muted" style="margin-bottom:14px">Каждую ночь смотрим, на каком месте ваш сайт в поиске Яндекса по выбранным фразам, и раз в неделю присылаем письмо: что выросло, что упало.</p>
@@ -70,7 +90,7 @@
     </dl>
   </section>
 
-  <section class="card">
+  <section class="card" id="yandex">
     <h2>Яндекс Вебмастер и Метрика</h2>
     {% if not feats.webmaster %}<p class="muted small">Настоящие показы, клики и переходы из поиска прямо в кабинете · {{ locked('webmaster') }}</p>
     {% elif yandex_link %}<p class="muted small">Показы и клики из Вебмастера, переходы из Метрики — за 28 дней, берём у Яндекса при открытии и не храним.</p>
@@ -79,7 +99,7 @@
     {% else %}<p class="muted small">Подключите Яндекс ID, на котором сайт подтверждён в Вебмастере и стоит счётчик Метрики, — покажем настоящие показы, клики и переходы из поиска. <a href="/settings#yandex">Подключить в настройках</a>.</p>{% endif %}
   </section>
 
-  <div class="card table-scroll">
+  <div class="card table-scroll" id="history">
     <h2>История</h2>
     {% if jobs %}
     <table class="history">

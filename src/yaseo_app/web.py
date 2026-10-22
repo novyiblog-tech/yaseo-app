@@ -382,8 +382,19 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
     def site_page(request: Request, site_id: int, user=Depends(current), c=Depends(conn)):
         return site_view(request, c, user, own_site(c, user, site_id))
 
+    @app.get("/{name}.js")
+    def design_js(name: str):
+        if name not in ("running", "ui"):
+            raise HTTPException(status_code=404)
+        return Response((HERE / "design" / f"{name}.js").read_text(encoding="utf-8"),
+                        media_type="application/javascript")
+
     def site_view(request, c, user, site, status=200, **extra):
+        running = c.execute("SELECT * FROM jobs WHERE site_id = %s AND kind = 'audit'"
+                            " AND status IN ('queued', 'running') ORDER BY id DESC LIMIT 1",
+                            (site["id"],)).fetchone()
         return page(request, "cabinet/site.html.j2", user, site=site, status=status,
+                    running=running, progress=_progress(c, running) if running else None,
                     jobs=accounts.site_jobs(c, site["id"]),
                     positions=monitor.site_table(c, site["id"], monitor.msk_today(c)),
                     quota=monitor.quota(c, user), plan=billing.current(c, user)["plan"],
@@ -613,7 +624,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         except Refused as exc:
             return site_view(request, c, user, site, status=400, error=str(exc),
                              queries=queries)
-        return RedirectResponse(f"/jobs/{job_id}", status_code=303)
+        return RedirectResponse(f"/sites/{site_id}", status_code=303)
 
     @app.post("/sites/{site_id}/delete")
     def delete_site(request: Request, site_id: int, csrf: str = Form(""),

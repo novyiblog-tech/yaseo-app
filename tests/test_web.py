@@ -116,11 +116,17 @@ class WebTest(PgTestCase):
         site_url = str(r.url)
         r = self.client.post(site_url + "/run", data={
             "queries": "ремонт квартир\nдизайн интерьера", "max_pages": 5, "csrf": csrf(r.text)})
+        # проверка идёт в своём блоке на странице сайта, остальные разделы остаются на месте
+        self.assertEqual(str(r.url), site_url)
         self.assertIn("в очереди", r.text)
-        self.assertIn('http-equiv="refresh"', r.text)
-        job_url = str(r.url)
+        self.assertIn('id="running"', r.text)
+        self.assertIn('/running.js', r.text)
+        self.assertIn("Место в Яндексе", r.text)
+        self.assertNotIn("Запустить проверку", r.text)  # вторая одновременно не идёт
+        job_url = "http://testserver" + re.search(r'href="(/jobs/\d+)"', r.text).group(1)
+        self.assertEqual(self.client.get("/running.js").status_code, 200)
 
-        r2 = self.client.post(site_url + "/run", data={"csrf": csrf(r.text)})
+        r2 = self.client.post(site_url + "/run", data={"csrf": csrf(page)})
         self.assertIn("уже идёт", r2.text)
 
         worker.run_once(self.conn, "w-test", sources.build("fake"), allow_private=True)

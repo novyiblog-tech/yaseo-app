@@ -23,6 +23,9 @@ h2 { font-size: var(--size-h2); margin-bottom: 14px; }
 .wrap { max-width: var(--page-width); margin: 0 auto; padding: 40px 24px 80px; }
 .stack > * + * { margin-top: 28px; }
 .crumbs { font-size: var(--size-small); color: var(--ink-3); margin-bottom: 10px; }
+.subnav { display: flex; flex-wrap: wrap; gap: 8px; }
+.subnav a { padding: 8px 16px; border-radius: var(--radius-pill); background: var(--surface-2); color: var(--ink); text-decoration: none; font-size: var(--size-small); font-weight: 600; }
+.subnav a:hover, .subnav a:focus-visible { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 
 /* карточки и формы */
 .card { background: var(--glass), var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 24px; }
@@ -126,6 +129,7 @@ tr.row-link:hover .row-go, tr.row-link:focus-within .row-go { color: var(--accen
 .tile-url { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tile-score { display: flex; align-items: baseline; gap: 12px; }
 .tile-lights { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--size-small); color: var(--ink-2); }
+.score-cap { font-size: var(--size-micro); line-height: 1.25; color: var(--ink-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 .score-sm { font-family: var(--font-display); font-weight: 800; font-size: 52px; line-height: .9; letter-spacing: -0.05em; }
 .score-xs { font-weight: 800; }
 .score-sm.green, .score-xs.green { color: var(--accent); } .score-sm.yellow, .score-xs.yellow { color: var(--warn); }
@@ -296,6 +300,23 @@ tr.row-link:hover .row-go, tr.row-link:focus-within .row-go { color: var(--accen
 .share { margin-top: 14px; }
 .share .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
 .share .row input { flex: 1 1 260px; }
-select { padding: 12px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; }
+select { appearance: none; -webkit-appearance: none; padding: 12px 44px 12px 18px; border-radius: var(--radius-pill); border: 1px solid var(--line); color: var(--ink); font: inherit; cursor: pointer;
+  background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9' fill='none'%3E%3Cpath d='M1 1.5l6 6 6-6' stroke='%23c8ff00' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 18px center / 14px 9px; }
+select:hover { border-color: var(--accent); }
+select option { background: var(--surface); color: var(--ink); }
+/* собственный выпадающий список (ui.js): поверх настоящего select, который остаётся в форме */
+.dd { position: relative; }
+.dd-native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.dd-btn { width: 100%; text-align: left; padding: 12px 44px 12px 18px; border-radius: var(--radius-pill); border: 1px solid var(--line); color: var(--ink); font: inherit; cursor: pointer;
+  background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9' fill='none'%3E%3Cpath d='M1 1.5l6 6 6-6' stroke='%23c8ff00' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 18px center / 14px 9px; }
+.dd-btn:hover, .dd.open .dd-btn { border-color: var(--accent); }
+.dd.open .dd-btn { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9' fill='none'%3E%3Cpath d='M1 7.5l6-6 6 6' stroke='%23c8ff00' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.dd-list { display: none; position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 6px); max-height: 320px; overflow-y: auto; margin: 0; padding: 6px; list-style: none;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: 0 18px 40px rgba(0,0,0,.5); }
+.dd.open .dd-list { display: block; }
+.dd-opt { padding: 10px 14px; border-radius: var(--radius); cursor: pointer; display: flex; justify-content: space-between; gap: 12px; }
+.dd-opt.on { background: rgba(200,255,0,.12); }
+.dd-opt[aria-selected=true] { color: var(--accent); font-weight: 700; }
+.dd-opt[aria-selected=true]::after { content: "✓"; }
 .locked { color: var(--ink-2); }
 .field label.check { text-transform: none; letter-spacing: 0; font-size: var(--size-small); font-weight: 400; color: var(--ink-2); }

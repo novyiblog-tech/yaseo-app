@@ -7,6 +7,12 @@
     <div class="crumbs"><a href="/sites">Сайты</a> / <a href="/sites/{{ job.site_id }}">{{ job.params.url }}</a> /</div>
     <h1>Проверка от {{ job.created_at|dt }} <span class="pill {{ job.status }}" style="vertical-align:middle">{{ STATUS_TITLES[job.status] }}</span></h1>
   </div>
+  <nav class="subnav" aria-label="Разделы сайта">
+    <a href="/sites/{{ job.site_id }}#positions">Место в Яндексе</a>
+    <a href="/sites/{{ job.site_id }}/settings">Настройка сайта</a>
+    <a href="/sites/{{ job.site_id }}#yandex">Яндекс Вебмастер и Метрика</a>
+    <a href="/sites/{{ job.site_id }}#history">История</a>
+  </nav>
 
   {% if job.status in ('queued', 'running') %}
   <div class="card">
