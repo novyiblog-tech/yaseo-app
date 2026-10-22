@@ -340,3 +340,5 @@ a.back:hover, a.back:focus-visible { color: var(--accent); box-shadow: inset 0 0
 .tile-box { position: relative; display: grid; }
 .tile-box .tile { padding-bottom: 48px; }
 .tile-del { position: absolute; right: 20px; bottom: 16px; z-index: 2; }
+.tile-del .linkbtn { font-size: var(--size-micro); color: var(--ink-3); }
+.tile-del .linkbtn:hover { color: var(--bad); }
