@@ -361,3 +361,24 @@ class HistoryTest(PgTestCase):
     def test_sparkline(self):
         self.assertEqual(history.sparkline([50]), "")
         self.assertIn("<polyline", history.sparkline([10, None, 40, 60]))
+
+
+class PaymentHistoryTest(PgTestCase):
+    def test_history_hides_abandoned_attempts(self):
+        u = self.user()
+
+        def add(status, age):
+            self.conn.execute(
+                "INSERT INTO payments (user_id, plan, amount_rub, purpose, provider, idempotence_key,"
+                " status, months, created_at) VALUES (%s, 'start', 2990, 'purchase', 'tbank', %s, %s, 1,"
+                " now() - %s::interval)", (u["id"], f"k{status}{age}", status, age))
+
+        add("succeeded", "3 days")
+        add("refunded", "2 days")
+        add("pending", "1 day")      # брошенное
+        add("pending", "30 minutes")  # свежее
+        add("pending", "10 minutes")  # свежее, новее: останется только оно
+        got = billing.payment_history(self.conn, u)
+        self.assertEqual(sorted(x["status"] for x in got), ["pending", "refunded", "succeeded"])
+        fresh = [x for x in got if x["status"] == "pending"][0]
+        self.assertLess((self.conn.execute("SELECT now() AS t").fetchone()["t"] - fresh["created_at"]).total_seconds(), 15 * 60)
