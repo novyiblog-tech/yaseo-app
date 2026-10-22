@@ -123,3 +123,30 @@
 
   Array.prototype.forEach.call(document.querySelectorAll("select"), build);
 })();
+
+// Предпросмотр выбранного файла-картинки до сохранения (data:-адрес: CSP не пускает blob:).
+(function () {
+  Array.prototype.forEach.call(document.querySelectorAll("input[type=file][data-preview]"), function (input) {
+    var box = document.getElementById(input.dataset.preview);
+    if (!box) return;
+    var before = box.innerHTML;
+    input.addEventListener("change", function () {
+      var file = input.files && input.files[0];
+      if (!file) { box.innerHTML = before; return; }
+      if (!/^image\//.test(file.type)) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        var img = document.createElement("img");
+        img.alt = "Новый логотип";
+        img.src = reader.result;
+        box.innerHTML = "";
+        box.appendChild(img);
+        var note = document.createElement("span");
+        note.className = "muted small";
+        note.textContent = "Предпросмотр. Нажмите «Сохранить», чтобы применить.";
+        box.appendChild(note);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+})();

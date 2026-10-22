@@ -492,6 +492,15 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
             return settings_page(request, c, user, status=400, renew_error=str(exc))
         return RedirectResponse("/settings#renew", status_code=303)
 
+    @app.get("/settings/logo")
+    def settings_logo(user=Depends(current), c=Depends(conn)):
+        row = c.execute("SELECT brand_logo, brand_logo_type FROM users WHERE id = %s",
+                        (user["id"],)).fetchone()
+        if not row or not row["brand_logo"]:
+            raise HTTPException(status_code=404)
+        return Response(bytes(row["brand_logo"]), media_type=row["brand_logo_type"],
+                        headers={"X-Content-Type-Options": "nosniff"})
+
     @app.post("/settings/brand")
     async def settings_brand(request: Request, brand_name: str = Form(""),
                              brand_contacts: str = Form(""), remove_logo: str = Form(""),

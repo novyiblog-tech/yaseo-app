@@ -252,6 +252,13 @@ class ShareBrandTest(Base):
                        files={"logo": ("logo.png", PNG, "image/png")})
             self.assertEqual(r.status_code, 200)
             rep = c.get(f"/jobs/{jid}/report").text
+            # предпросмотр в настройках: страница ссылается на свой логотип, он отдаётся владельцу
+            self.assertIn('src="/settings/logo', c.get("/settings").text)
+            got = c.get("/settings/logo")
+            self.assertEqual((got.status_code, got.headers["content-type"]), (200, "image/png"))
+            self.assertEqual(got.content, PNG)
+        with TestClient(self.app) as anon:
+            self.assertNotEqual(anon.get("/settings/logo", follow_redirects=False).status_code, 200)
         self.assertIn("Студия Ромашка", rep)
         self.assertIn("data:image/png;base64,", rep)
         self.assertIn("000-00-00", rep)

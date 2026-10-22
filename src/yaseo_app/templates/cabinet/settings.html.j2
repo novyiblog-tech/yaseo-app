@@ -57,7 +57,8 @@
         <textarea id="brand_contacts" name="brand_contacts" maxlength="300" style="min-height:70px">{{ user.brand_contacts or '' }}</textarea></div>
       <div class="field"><label for="logo">Логотип
         <span class="hint">PNG, JPEG или WebP до 300 КБ.{% if user.brand_logo %} Сейчас загружен.{% endif %}</span></label>
-        <input id="logo" type="file" name="logo" accept="image/png,image/jpeg,image/webp"></div>
+        <div class="logo-preview" id="logo-preview" data-empty="Логотип не загружен">{% if user.brand_logo %}<img src="/settings/logo?v={{ user.brand_logo|length }}" alt="Текущий логотип">{% else %}<span class="muted small">Логотип не загружен</span>{% endif %}</div>
+        <input id="logo" type="file" name="logo" accept="image/png,image/jpeg,image/webp" data-preview="logo-preview"></div>
       {% if user.brand_logo %}<label class="check"><input type="checkbox" name="remove_logo" value="yes"><span>Убрать логотип</span></label>{% endif %}
       <p style="margin-top:18px"><button class="btn ghost" type="submit">Сохранить</button></p>
       {% if brand_error %}<div class="error" role="alert">{{ brand_error }}</div>{% endif %}
