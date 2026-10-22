@@ -12,7 +12,10 @@
 {% endmacro %}
 {% macro term_label(m) %}{{ 'Месяц' if m == 1 else m ~ ' ' ~ m|plural('месяц', 'месяца', 'месяцев') }}{% endmacro %}
 <div class="stack">
-  <h1>Тариф и оплата</h1>
+  <div>
+    <div class="crumbs"><a href="/sites">Мои сайты</a> /</div>
+    <h1>Тариф и оплата</h1>
+  </div>
   {% if pay_off %}<div class="note">Оплата тарифов пока не подключена. Скоро откроем; до тех пор доступна бесплатная проверка и промокод.</div>{% endif %}
   {% if fake %}<div class="note fake">Тестовый режим: оплата виртуальная, деньги не списываются.</div>{% endif %}
   {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}

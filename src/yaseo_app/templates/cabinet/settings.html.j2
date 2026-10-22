@@ -3,7 +3,10 @@
 {% block main %}
 {% macro locked(code) %}<p class="muted small">С тарифа «{{ feature_plan[code] }}» · <a href="/billing">тарифы</a></p>{% endmacro %}
 <div class="stack">
-  <h1>Настройки</h1>
+  <div>
+    <div class="crumbs"><a href="/sites">Мои сайты</a> /</div>
+    <h1>Настройки</h1>
+  </div>
   {% if user.actor_id %}
   <div class="note">Вы вошли как {{ user.actor_email }} в кабинет {{ user.email }}. Настройки кабинета, оплату и коллег меняет владелец.</div>
   {% else %}

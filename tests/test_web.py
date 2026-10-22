@@ -125,6 +125,10 @@ class WebTest(PgTestCase):
         self.assertNotIn("Запустить проверку", r.text)  # вторая одновременно не идёт
         job_url = "http://testserver" + re.search(r'href="(/jobs/\d+)"', r.text).group(1)
         self.assertEqual(self.client.get("/running.js").status_code, 200)
+        jp = self.client.get(job_url).text  # страница проверки: ход обновляется скриптом, не перезагрузкой
+        self.assertIn('id="running"', jp)
+        self.assertIn('/running.js', jp)
+        self.assertNotIn('http-equiv="refresh"', jp)
 
         r2 = self.client.post(site_url + "/run", data={"csrf": csrf(page)})
         self.assertIn("уже идёт", r2.text)
