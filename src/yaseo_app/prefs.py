@@ -41,7 +41,7 @@ def _all_regions() -> tuple:
 
 REGIONS = _all_regions()
 REGION_NAMES = dict(REGIONS)
-SCHEDULES = {"off": "не проверять сам", "week": "раз в неделю", "month": "раз в месяц"}
+SCHEDULES = {"off": "выключено: запускаю проверки сам", "week": "раз в неделю", "month": "раз в месяц"}
 SECTIONS = ("demand", "positions", "answers")
 MAX_EXCLUDE, MAX_RIVALS = 20, 5
 
