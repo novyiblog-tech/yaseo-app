@@ -513,7 +513,8 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
             prefs.save_brand(c, user, brand_name, brand_contacts, data or None,
                              remove_logo == "yes")
         except Refused as exc:
-            return settings_page(request, c, user, status=400, brand_error=str(exc))
+            return settings_page(request, c, user, status=400, brand_error=str(exc),
+                                 brand_form={"name": brand_name, "contacts": brand_contacts})
         return RedirectResponse("/settings#brand", status_code=303)
 
     @app.post("/settings/team")

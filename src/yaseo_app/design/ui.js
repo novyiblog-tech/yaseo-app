@@ -134,6 +134,17 @@
       var file = input.files && input.files[0];
       if (!file) { box.innerHTML = before; return; }
       if (!/^image\//.test(file.type)) return;
+      var max = parseInt(input.dataset.max || "0", 10);
+      if (max && file.size > max) {
+        input.value = "";
+        box.innerHTML = "";
+        var warn = document.createElement("span");
+        warn.className = "error";
+        warn.setAttribute("role", "alert");
+        warn.textContent = "Файл " + Math.round(file.size / 1000) + " КБ: логотип должен быть не больше " + Math.round(max / 1000) + " КБ. Выберите файл поменьше.";
+        box.appendChild(warn);
+        return;
+      }
       var reader = new FileReader();
       reader.onload = function () {
         var img = document.createElement("img");
@@ -149,4 +160,10 @@
       reader.readAsDataURL(file);
     });
   });
+})();
+
+// После ошибки формы страница открывается сверху: прокручиваем к сообщению.
+(function () {
+  var err = document.querySelector("form .error[role=alert]");
+  if (err && err.scrollIntoView) err.scrollIntoView({ block: "center" });
 })();

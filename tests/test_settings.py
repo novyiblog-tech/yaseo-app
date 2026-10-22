@@ -259,6 +259,18 @@ class ShareBrandTest(Base):
             self.assertEqual(got.content, PNG)
         with TestClient(self.app) as anon:
             self.assertNotEqual(anon.get("/settings/logo", follow_redirects=False).status_code, 200)
+        # слишком большой логотип: ошибка, а введённые название и контакты остаются в форме
+        with TestClient(self.app) as c:
+            self.login(c, "o@t.ru")
+            page = c.get("/settings").text
+            r = c.post("/settings/brand", data={"brand_name": "Моя Студия XYZ",
+                                                "brand_contacts": "тел 123-45-67",
+                                                "csrf": csrf(page)},
+                       files={"logo": ("big.png", PNG + b"0" * (prefs.MAX_LOGO + 1), "image/png")})
+            self.assertEqual(r.status_code, 400)
+            self.assertIn("300", r.text)
+            self.assertIn('value="Моя Студия XYZ"', r.text)
+            self.assertIn("тел 123-45-67", r.text)
         self.assertIn("Студия Ромашка", rep)
         self.assertIn("data:image/png;base64,", rep)
         self.assertIn("000-00-00", rep)

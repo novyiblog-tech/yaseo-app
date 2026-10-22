@@ -51,14 +51,14 @@
     <form method="post" action="/settings/brand" enctype="multipart/form-data">
       <input type="hidden" name="csrf" value="{{ user.csrf }}">
       <div class="field"><label for="brand_name">Название</label>
-        <input id="brand_name" type="text" name="brand_name" maxlength="80" value="{{ user.brand_name or '' }}"></div>
+        <input id="brand_name" type="text" name="brand_name" maxlength="80" value="{{ (brand_form.name if brand_form else user.brand_name) or '' }}"></div>
       <div class="field"><label for="brand_contacts">Контакты
         <span class="hint">Телефон, почта, сайт — будут внизу отчёта.</span></label>
-        <textarea id="brand_contacts" name="brand_contacts" maxlength="300" style="min-height:70px">{{ user.brand_contacts or '' }}</textarea></div>
+        <textarea id="brand_contacts" name="brand_contacts" maxlength="300" style="min-height:70px">{{ (brand_form.contacts if brand_form else user.brand_contacts) or '' }}</textarea></div>
       <div class="field"><label for="logo">Логотип
         <span class="hint">PNG, JPEG или WebP до 300 КБ.{% if user.brand_logo %} Сейчас загружен.{% endif %}</span></label>
         <div class="logo-preview" id="logo-preview" data-empty="Логотип не загружен">{% if user.brand_logo %}<img src="/settings/logo?v={{ user.brand_logo|length }}" alt="Текущий логотип">{% else %}<span class="muted small">Логотип не загружен</span>{% endif %}</div>
-        <input id="logo" type="file" name="logo" accept="image/png,image/jpeg,image/webp" data-preview="logo-preview"></div>
+        <input id="logo" type="file" name="logo" accept="image/png,image/jpeg,image/webp" data-preview="logo-preview" data-max="300000"></div>
       {% if user.brand_logo %}<label class="check"><input type="checkbox" name="remove_logo" value="yes"><span>Убрать логотип</span></label>{% endif %}
       <p style="margin-top:18px"><button class="btn ghost" type="submit">Сохранить</button></p>
       {% if brand_error %}<div class="error" role="alert">{{ brand_error }}</div>{% endif %}
