@@ -250,7 +250,10 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         """Пример отчёта — настоящий прогон по тестовому сайту из tests/site."""
         import json
         data = json.loads((HERE / "examples" / "test-site.json").read_text(encoding="utf-8"))
-        return HTMLResponse(report.render(data, kind="Пример на тестовом сайте"))
+        paid = json.loads((HERE / "examples" / "paid-sample.json").read_text(encoding="utf-8"))
+        return HTMLResponse(report.render(
+            data, score.assess(data, paid=paid), paid=paid,
+            kind="Пример полного аудита на тестовом сайте. Спрос, места в Яндексе и ответы нейросети в примере условные."))
 
     @app.get("/legal/offer")
     def offer(request: Request):

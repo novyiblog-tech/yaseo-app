@@ -106,9 +106,9 @@
     <dl class="prefs-sum">
       <div><dt>Город</dt><dd>{{ region_name(eff.region) }}{{ tag('region') }}</dd></div>
       <div><dt>Автопроверка</dt><dd>{{ 'выключена' if eff.schedule == 'off' else schedules[eff.schedule] }}{{ tag('schedule') }}</dd></div>
-      <div><dt>Исключённые разделы</dt><dd>{{ eff.exclude|length if eff.exclude else 'нет' }}{{ tag('exclude') }}</dd></div>
-      <div><dt>Обход</dt><dd>{{ 'бережный' if eff.gentle else 'обычный' }}{{ tag('gentle') }}</dd></div>
-      <div><dt>Собираем</dt><dd>{{ 'всё' if not eff.off else (3 - eff.off|length)|string + ' из 3 разделов' }}{{ tag('sections') }}</dd></div>
+      <div><dt>Не проверяем</dt><dd>{% if eff.exclude %}{{ eff.exclude|length }} {{ eff.exclude|length|plural('раздел', 'раздела', 'разделов') }} сайта{% else %}ничего, проверяем весь сайт{% endif %}{{ tag('exclude') }}</dd></div>
+      <div><dt>Скорость проверки</dt><dd>{{ 'бережная, медленнее' if eff.gentle else 'обычная' }}{{ tag('gentle') }}</dd></div>
+      <div><dt>Что узнаём из Яндекса</dt><dd>{{ 'спрос, места и нейросеть' if not eff.off else (3 - eff.off|length)|string + ' из 3: спрос, места, нейросеть' }}{{ tag('sections') }}</dd></div>
       <div><dt>Конкуренты</dt><dd>{{ eff.rivals|length if eff.rivals else 'нет' }}{{ tag('rivals') }}</dd></div>
     </dl>
     <p style="margin-top:18px">{% if any_feat %}<a class="btn ghost" href="/sites/{{ site.id }}/settings">Изменить</a>

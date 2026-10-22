@@ -1,0 +1,20 @@
+{
+  "demand": {"status": "ok", "items": [
+    {"query": "ремонт обуви краснодар", "freq": 5400},
+    {"query": "починить сапоги", "freq": 1900},
+    {"query": "замена молнии на ботинках", "freq": 880},
+    {"query": "ремонт каблуков", "freq": 640}
+  ]},
+  "positions": {"status": "ok", "items": [
+    {"query": "ремонт обуви краснодар", "position": 4, "top3": ["obuvmaster.example", "krasnodar-remont.example", "sapozhnik23.example"]},
+    {"query": "починить сапоги", "position": 12, "top3": ["sapozhnik23.example", "obuvmaster.example", "remontok.example"]},
+    {"query": "замена молнии на ботинках", "position": null, "top3": ["molniya-shop.example", "obuvmaster.example", "remontok.example"]},
+    {"query": "ремонт каблуков", "position": 2, "top3": ["obuvmaster.example", "remont-obuvi.example", "kabluk.example"]}
+  ]},
+  "answers": {"status": "ok", "items": [
+    {"query": "ремонт обуви краснодар", "cited": false, "rivals": ["obuvmaster.example", "sapozhnik23.example"]},
+    {"query": "починить сапоги", "cited": false, "rivals": ["obuvmaster.example"]},
+    {"query": "замена молнии на ботинках", "cited": true, "cited_position": 3, "rivals": ["molniya-shop.example"]},
+    {"query": "ремонт каблуков", "cited": false, "rivals": ["kabluk.example", "obuvmaster.example"]}
+  ]}
+}

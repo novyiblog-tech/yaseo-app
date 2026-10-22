@@ -20,14 +20,14 @@
       {% if feats.schedule %}<select id="schedule" name="schedule">{% for code, name in schedules.items() %}<option value="{{ code }}" {% if code == site.schedule %}selected{% endif %}>{{ name }}</option>{% endfor %}</select>
       {% else %}<div>{{ locked('schedule') }}</div>{% endif %}</div>
     <div class="field"><label for="exclude">Не проверять разделы сайта
-      <span class="hint">Путь с новой строки: /cart, /personal, /catalog/*/filter, *?sort=*. Корзина, фильтры и личный кабинет дают ложные замечания.</span></label>
+      <span class="hint">Впишите адреса разделов, которые проверять не надо, по одному на строку. Например: /cart — корзина, /personal — личный кабинет, *?sort=* — любые страницы с сортировкой. Такие страницы дают ложные замечания.</span></label>
       {% if feats.exclude %}<textarea id="exclude" name="exclude" style="min-height:80px" placeholder="/cart&#10;/personal&#10;*?sort=*">{{ exclude_text if exclude_text is defined else (site.exclude or [])|join('\n') }}</textarea>
       {% else %}<div>{{ locked('exclude') }}</div>{% endif %}</div>
     {% if feats.gentle %}<label class="check"><input type="checkbox" name="gentle" value="yes" {% if site.gentle %}checked{% endif %}>
-      <span>Бережный обход: страницы по одной раз в 2 секунды — если хостинг слабый и сайт падает от нагрузки. Проверка дольше.</span></label>
-    {% else %}<p class="check"><span>Бережный обход · {{ locked('gentle') }}</span></p>{% endif %}
+      <span>Проверять бережно: открывать по одной странице раз в 2 секунды. Включите, если сайт тормозит или падает во время проверки. Проверка станет дольше.</span></label>
+    {% else %}<p class="check"><span>Бережная проверка · {{ locked('gentle') }}</span></p>{% endif %}
     <div class="field"><label>Какие разделы собирать
-      <span class="hint">Выключите ненужное — проверка быстрее, а ответы нейросети не тратятся.</span></label>
+      <span class="hint">Уберите галочку у того, что не нужно: проверка пройдёт быстрее, а ответы нейросети не будут тратиться.</span></label>
       {% if feats.sections %}{% for key in ('demand', 'positions', 'answers') %}
       <label class="check" style="margin-top:6px"><input type="checkbox" name="sec_{{ key }}" value="yes" {% if (site.sections or {}).get(key, true) %}checked{% endif %}><span>{{ SECTION_TITLES[key] }}</span></label>{% endfor %}
       {% else %}<div>Все разделы · {{ locked('sections') }}</div>{% endif %}</div>

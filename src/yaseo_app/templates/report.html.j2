@@ -47,7 +47,7 @@
     {% for l in lights %}
     <div class="light">
       <div class="dot {{ l.color }}"></div>
-      <div><b>{{ l.name }}</b><div class="micro muted">{{ l.note }}</div></div>
+      <div><b>{{ l.name }}</b><div class="micro muted">{{ l.note }}</div>{% if l.key == 'tech' and l.score is not none and l.score < 30 %}<div class="micro muted">почти на каждой странице есть замечания</div>{% endif %}</div>
       {% if l.score is not none %}<div class="val">{{ l.score }}</div>{% else %}<div class="val none">не измерено</div>{% endif %}
     </div>
     {% endfor %}
@@ -72,7 +72,7 @@
           <div><span>Где</span>{{ s.pages }} {{ s.pages|pages_word }}</div>
           <div><span>Важность</span><span class="tag {{ {'critical':'bad','major':'warn','minor':'quiet'}[s.severity] }}">{{ {'critical':'срочно','major':'важно','minor':'мелочь'}[s.severity] }}</span></div>
         </div>
-        <div class="evidence"><span class="muted">Доказательство:</span> <span class="mono">{{ s.urls[0]|short }}</span> — {{ s.evidence }}</div>
+        <details class="evidence"{% if expand %} open{% endif %}><summary>Подробности для разработчика</summary><div style="margin-top:8px">Страница <span class="mono">{{ s.urls[0]|short }}</span>: {{ s.evidence }}</div></details>
         {% if s.effect %}<p class="small muted" style="margin-top:10px">Что изменится: {{ s.effect }}</p>{% endif %}
       </div>
     </div>
@@ -87,7 +87,7 @@
   <div class="sec-head"><span class="n">02</span><h2>Спрос</h2></div>
   {% set dem = (paid or {}).get('demand') %}
   {% if dem and dem['items'] %}
-  <p class="muted" style="margin-bottom:14px">Сколько раз в месяц эти фразы набирают в Яндексе, по данным Яндекс Вордстата.</p>
+  <p class="muted" style="margin-bottom:14px">Сколько раз в месяц люди вводят эти фразы в Яндексе. Данные берём из Яндекс Вордстата — сервиса, где Яндекс показывает частоту запросов.</p>
   <table>
     <tr><th>Фраза</th><th class="num">Ищут раз в месяц</th></tr>
     {% for it in dem['items'] %}<tr><td>{{ it.query }}</td><td class="num">{{ it.error or it.freq|num }}</td></tr>{% endfor %}
@@ -95,7 +95,7 @@
   {% else %}
   <div class="pending">
     <h3>{% if paid %}Данных нет{% else %}В бесплатной проверке не измеряется{% endif %}</h3>
-    <p class="muted">{% if paid %}{{ (dem or {}).get('reason') or 'Фразы не заданы или данные Вордстата не получены.' }}{% else %}Сколько людей в месяц ищут ваши услуги и какую долю видите вы: считается по данным Вордстата в полном аудите.{% endif %}</p>
+    <p class="muted">{% if paid %}{{ (dem or {}).get('reason') or 'Фразы не заданы или данные Вордстата не получены.' }}{% else %}Сколько людей в месяц ищут ваши услуги и какую долю видите вы: считается в полном аудите по данным Яндекса о частоте запросов.{% endif %}</p>
   </div>
   {% endif %}
 </section>
@@ -141,10 +141,15 @@
   </table>
   {% endif %}
 
-  {% if ai.fixes %}
-  <h3 style="margin:28px 0 10px">Что исправить, чтобы нейросети лучше вас понимали</h3>
+  {% set step_titles = steps|map(attribute='title')|list %}
+  {% set ai_extra = ai.fixes|rejectattr('title', 'in', step_titles)|list %}
+  {% if ai.fixes and not ai_extra %}
+  <p class="muted" style="margin-top:24px">Что исправить, чтобы нейросети лучше вас понимали, уже в списке шагов в разделе 01.</p>
+  {% elif ai_extra %}
+  <h3 style="margin:28px 0 10px">{% if ai_extra|length < ai.fixes|length %}Ещё что исправить для нейросетей{% else %}Что исправить, чтобы нейросети лучше вас понимали{% endif %}</h3>
+  {% if ai_extra|length < ai.fixes|length %}<p class="muted small" style="margin-bottom:8px">Остальное — в шагах раздела 01.</p>{% endif %}
   <ol class="ai-fixes">
-    {% for f in ai.fixes %}
+    {% for f in ai_extra %}
     <li><b>{{ f.title }}</b>{% if f.count > 1 %} <span class="muted small">(на {{ f.count }} стр.)</span>{% endif %}
       <div class="small">{{ f.problem }}</div>
       <div class="small"><b>Что сделать:</b> {{ f.action }}</div>
@@ -216,8 +221,8 @@
 
 <section>
   <div class="sec-head"><span class="n">06</span><h2>Как считали</h2></div>
-  <p>Сайт обошёл наш робот: до {{ max_pages }} страниц по ссылкам с главной и из карты сайта. Каждая находка держится на цитате из страницы — код ответа, длина тега, адрес дубля. Готовность к нейросетям проверена по robots.txt, llms.txt и разметке {{ geo.pages|length }} страниц.</p>
-  <p style="margin-top:10px">Оценка: срочная находка весит 10, важная 3, мелочь 1. Техника — штраф на страницу, нейросети — на сайт. Зелёный от 80, жёлтый от 50. Что не измерялось, в оценку не входит. Гарантий позиций нет и быть не может: порядок выдачи определяет Яндекс.</p>
+  <p>Сайт обошёл наш робот: до {{ max_pages }} страниц, переходя по ссылкам с главной и по карте сайта. У каждой находки есть подтверждение со страницы — подробности свёрнуты под шагом, для разработчика. Готовность к нейросетям проверили по служебным файлам сайта и по тому, как устроены {{ geo.pages|length }} {{ geo.pages|length|pages_word }}.</p>
+  <p style="margin-top:10px">Оценка: чем серьёзнее замечание, тем больше баллов оно отнимает: срочное — 10, важное — 3, мелочь — 1. Зелёный цвет — от 80 баллов, жёлтый — от 50. Что не измерялось, в оценку не входит. Гарантий позиций нет и быть не может: порядок выдачи определяет Яндекс.</p>
 </section>
 
 <footer class="foot">
