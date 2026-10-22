@@ -33,7 +33,7 @@ LIGHT_GREEN = 80
 LIGHT_YELLOW = 50
 
 # Доля светофора в общей оценке; пересчитывается по тем, что измерены.
-SHARE = {"tech": 0.4, "yandex": 0.3, "ai": 0.3}
+SHARE = {"tech": 0.45, "yandex": 0.2, "ai": 0.35}
 
 
 @dataclass
@@ -130,16 +130,18 @@ def ai_light(geo: dict) -> Light:
 
 
 #: Очки за место по фразе: первая тройка — полный балл, дальше меньше, вне проверяемой глубины — ноль.
-POSITION_POINTS = ((3, 100), (10, 70), (20, 40), (50, 15))
+POSITION_POINTS = ((3, 100), (10, 75), (20, 50), (50, 25))
+#: Сайт не найден в проверяемой глубине: не ноль, чтобы частотные фразы не обнуляли оценку.
+NOT_FOUND_POINTS = 10
 
 
 def position_points(position) -> int:
     if not position:
-        return 0
+        return NOT_FOUND_POINTS
     for limit, points in POSITION_POINTS:
         if position <= limit:
             return points
-    return 0
+    return NOT_FOUND_POINTS
 
 
 def yandex_light(paid: dict | None = None) -> Light:

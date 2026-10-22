@@ -45,7 +45,7 @@ class ScoreTest(unittest.TestCase):
     def test_total_ignores_unmeasured(self):
         a = score.assess(result([issue("major", "missing-h1")], []))
         self.assertEqual(a.lights[0].score, 97)
-        self.assertEqual(a.total, round((0.4 * 97 + 0.3 * 100) / 0.7))
+        self.assertEqual(a.total, round((0.45 * 97 + 0.35 * 100) / 0.8))
 
     def test_unreachable_site_is_grey(self):
         r = {"audit": {"pages_crawled": 0, "issues": [], "error": "нет ответа"},
@@ -125,11 +125,11 @@ class YandexLightTest(unittest.TestCase):
 
     def test_points_by_position(self):
         self.assertEqual([score.position_points(p) for p in (1, 3, 4, 10, 11, 20, 21, 50, 51, None)],
-                         [100, 100, 70, 70, 40, 40, 15, 15, 0, 0])
+                         [100, 100, 75, 75, 50, 50, 25, 25, 10, 10])
 
     def test_average_over_phrases_and_note(self):
         light = score.yandex_light(self.paid(1, 8, None, None))
-        self.assertEqual(light.score, round((100 + 70 + 0 + 0) / 4))
+        self.assertEqual(light.score, round((100 + 75 + 10 + 10) / 4))
         self.assertEqual(light.note, "в первой десятке 2 из 4 фраз")
 
     def test_no_phrases_is_grey_not_zero(self):
