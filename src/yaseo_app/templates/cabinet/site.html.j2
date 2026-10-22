@@ -77,9 +77,7 @@
   {% macro tag(code) %}{% if not feats[code] %} <span class="muted small">· с «{{ feature_plan[code] }}»</span>{% endif %}{% endmacro %}
   {% set any_feat = feats.region or feats.schedule or feats.exclude or feats.gentle or feats.sections or feats.rivals %}
   <section class="card" id="settings">
-    <div class="card-head"><h2>Настройки сайта</h2>
-      {% if any_feat %}<a class="btn ghost" href="/sites/{{ site.id }}/settings">Изменить</a>
-      {% else %}<a class="btn ghost" href="/billing">Тарифы</a>{% endif %}</div>
+    <h2>Настройки сайта</h2>
     <dl class="prefs-sum">
       <div><dt>Город</dt><dd>{{ region_name(eff.region) }}{{ tag('region') }}</dd></div>
       <div><dt>Автопроверка</dt><dd>{{ 'выключена' if eff.schedule == 'off' else schedules[eff.schedule] }}{{ tag('schedule') }}</dd></div>
@@ -88,6 +86,8 @@
       <div><dt>Собираем</dt><dd>{{ 'всё' if not eff.off else (3 - eff.off|length)|string + ' из 3 разделов' }}{{ tag('sections') }}</dd></div>
       <div><dt>Конкуренты</dt><dd>{{ eff.rivals|length if eff.rivals else 'нет' }}{{ tag('rivals') }}</dd></div>
     </dl>
+    <p style="margin-top:18px">{% if any_feat %}<a class="btn ghost" href="/sites/{{ site.id }}/settings">Изменить</a>
+      {% else %}<a class="btn ghost" href="/billing">Тарифы</a>{% endif %}</p>
   </section>
 
   <section class="card" id="yandex">
