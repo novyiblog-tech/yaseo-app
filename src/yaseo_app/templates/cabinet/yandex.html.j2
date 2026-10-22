@@ -13,7 +13,7 @@
 
   <section class="card table-scroll">
     <h2>Вебмастер: как сайт показывается в поиске</h2>
-    {% if wm.error %}<p class="muted">Вебмастер ответил ошибкой: {{ wm.error }}</p>
+    {% if wm.error %}<p class="muted">Не удалось получить данные Вебмастера: {{ wm.error }}</p>
     {% elif not wm.found %}<p class="muted">Сайта нет среди подтверждённых в Вебмастере этого Яндекс ID. Добавьте и подтвердите его на webmaster.yandex.ru.</p>
     {% else %}
     <div class="diff-nums">
@@ -34,7 +34,7 @@
 
   <section class="card table-scroll">
     <h2>Метрика: откуда приходят люди</h2>
-    {% if mk.error %}<p class="muted">Метрика ответила ошибкой: {{ mk.error }}</p>
+    {% if mk.error %}<p class="muted">Не удалось получить данные Метрики: {{ mk.error }}</p>
     {% elif not mk.found %}<p class="muted">Счётчика Метрики для этого сайта у этого Яндекс ID нет.</p>
     {% else %}
     <div class="diff-nums">

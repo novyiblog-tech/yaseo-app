@@ -61,8 +61,11 @@ def _request(url: str, token: str | None = None, data: dict | None = None) -> di
             return json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         raise YandexError(f"{e.code}: {e.read(300).decode('utf-8', 'replace')}") from e
-    except (urllib.error.URLError, OSError, ValueError) as e:
-        raise YandexError(str(getattr(e, "reason", e))) from e
+    except (urllib.error.URLError, OSError) as e:
+        host = urllib.parse.urlsplit(url).hostname
+        raise YandexError(f"нет связи с {host} (сервер Яндекса не отвечает, попробуйте позже)") from e
+    except ValueError as e:
+        raise YandexError(str(e)) from e
 
 
 def _grant(data: dict) -> dict:
