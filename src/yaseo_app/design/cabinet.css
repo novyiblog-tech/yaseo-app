@@ -34,6 +34,11 @@ input[type=email], input[type=password], input[type=text], input[type=number], t
   width: 100%; padding: 12px 18px; background: var(--surface-2); color: var(--ink);
   border: 1px solid var(--line); border-radius: var(--radius-pill); font: inherit; }
 textarea { min-height: 110px; resize: vertical; border-radius: var(--radius); }
+/* Автозаполнение браузера красит поле светлым фоном и тёмным текстом: возвращаем цвета темы. */
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus,
+textarea:-webkit-autofill { -webkit-text-fill-color: var(--ink); caret-color: var(--ink);
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-2) inset; box-shadow: 0 0 0 1000px var(--surface-2) inset;
+  transition: background-color 9999s ease-out 0s; }
 input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; font-size: var(--size-small); color: var(--ink-2); }
 .check input { margin-top: 3px; accent-color: var(--accent); }
