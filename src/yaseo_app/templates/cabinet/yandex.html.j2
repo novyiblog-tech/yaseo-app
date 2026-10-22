@@ -1,5 +1,6 @@
 {% extends "cabinet/base.html.j2" %}
 {% block title %}Яндекс — {{ site.url }}{% endblock %}
+{% block back %}<a class="back" href="/sites/{{ site.id }}">← Назад</a>{% endblock %}
 {% block main %}
 {% set wm = data.webmaster or {} %}{% set mk = data.metrika or {} %}
 <div class="stack">

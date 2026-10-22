@@ -3,7 +3,7 @@
   var box = document.getElementById("running");
   if (!box) return;
   var timer = setInterval(function () {
-    fetch(location.pathname, { credentials: "same-origin" })
+    fetch(location.pathname + location.search, { credentials: "same-origin" })
       .then(function (r) { return r.text(); })
       .then(function (html) {
         var fresh = new DOMParser().parseFromString(html, "text/html").getElementById("running");

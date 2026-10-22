@@ -217,3 +217,17 @@
   var err = document.querySelector("form .error[role=alert]");
   if (err && err.scrollIntoView) err.scrollIntoView({ block: "center" });
 })();
+
+// «← Назад»: если пришли с нашей же страницы, идём назад по истории (как кнопка браузера),
+// иначе по ссылке на родительский раздел.
+(function () {
+  Array.prototype.forEach.call(document.querySelectorAll("a.back"), function (a) {
+    a.addEventListener("click", function (e) {
+      var ref = document.referrer || "";
+      if (history.length > 1 && ref.indexOf(location.origin) === 0 && ref !== location.href) {
+        e.preventDefault();
+        history.back();
+      }
+    });
+  });
+})();

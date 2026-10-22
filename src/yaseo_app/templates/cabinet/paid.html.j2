@@ -1,8 +1,8 @@
 {% extends "cabinet/base.html.j2" %}
 {% block title %}Оплата{% endblock %}
-{% block head %}{% if payment.status == 'pending' %}<meta http-equiv="refresh" content="3">{% endif %}{% endblock %}
+{% block back %}<a class="back" href="/billing">← Назад</a>{% endblock %}
 {% block main %}
-<div class="auth card">
+<div class="auth card"{% if payment.status == 'pending' %} id="running"{% endif %}>
   {% if payment.status == 'succeeded' %}
     <h1>Оплачено</h1>
     <p class="muted" style="margin-top:10px">Тариф «{{ plan.title }}» {{ 'продлён' if payment.purpose == 'renewal' else 'подключён' }}{% if sub %} до {{ sub.period_end|dt }}{% endif %}. Спасибо!</p>
@@ -20,4 +20,5 @@
     <p class="muted" style="margin-top:10px">Платёжный сервис ещё не ответил. Страница обновится сама.</p>
   {% endif %}
 </div>
+{% if payment.status == 'pending' %}<script src="/running.js" defer></script>{% endif %}
 {% endblock %}

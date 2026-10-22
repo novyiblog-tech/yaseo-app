@@ -32,6 +32,10 @@
   </nav>
 </header>
 <main class="wrap">
+{% if user and path != "/sites" and path != "/" %}
+{# видимый «назад»: родитель страницы переопределяется блоком back; скрипт (ui.js) ведёт назад по истории, если пришли с нашего сайта #}
+<div class="backbar">{% block back %}<a class="back" href="/sites">← Назад</a>{% endblock %}</div>
+{% endif %}
 {% if user and not user.email_confirmed_at %}
 <form class="note fake confirm-bar" method="post" action="/confirm/resend">
   <input type="hidden" name="csrf" value="{{ user.csrf }}">
