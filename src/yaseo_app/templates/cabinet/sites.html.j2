@@ -6,6 +6,7 @@
   {% if sites %}
   <div class="tiles">
     {% for s in sites %}
+    <div class="tile-box">
     <a class="tile" href="/sites/{{ s.id }}">
       <div class="tile-top">
         <span class="tile-url">{{ s.url }}</span>
@@ -26,6 +27,13 @@
       {% endif %}
       <div class="muted small">{% if s.last_job_id %}Последняя проверка {{ s.last_at|dt }}{% else %}Проверок ещё не было{% endif %}</div>
     </a>
+    {% if s.last_status not in ('queued', 'running') %}
+    <form class="tile-del" method="post" action="/sites/{{ s.id }}/delete" data-confirm="Убрать сайт {{ s.url }} из кабинета? Его проверки и отчёты будут недоступны.">
+      <input type="hidden" name="csrf" value="{{ user.csrf }}">
+      <button class="linkbtn small" type="submit" aria-label="Убрать сайт {{ s.url }}">убрать сайт</button>
+    </form>
+    {% endif %}
+    </div>
     {% endfor %}
   </div>
   {% else %}
