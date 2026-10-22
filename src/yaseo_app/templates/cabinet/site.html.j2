@@ -77,7 +77,8 @@
   {% macro tag(code) %}{% if not feats[code] %} <span class="muted small">· с «{{ feature_plan[code] }}»</span>{% endif %}{% endmacro %}
   {% set any_feat = feats.region or feats.schedule or feats.exclude or feats.gentle or feats.sections or feats.rivals %}
   <section class="card" id="settings">
-    <h2>Настройки сайта</h2>
+    <h2>Параметры проверки</h2>
+    <p class="muted small" style="margin:-6px 0 14px">Как мы проверяем этот сайт: город, автопроверка, что пропускать и с кем сравнивать.</p>
     <dl class="prefs-sum">
       <div><dt>Город</dt><dd>{{ region_name(eff.region) }}{{ tag('region') }}</dd></div>
       <div><dt>Автопроверка</dt><dd>{{ 'выключена' if eff.schedule == 'off' else schedules[eff.schedule] }}{{ tag('schedule') }}</dd></div>

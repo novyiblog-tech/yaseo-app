@@ -1,11 +1,11 @@
 {% extends "cabinet/base.html.j2" %}
-{% block title %}Настройки · {{ site.url }}{% endblock %}
+{% block title %}Параметры проверки · {{ site.url }}{% endblock %}
 {% block back %}<a class="back" href="/sites/{{ site.id }}">← Назад</a>{% endblock %}
 {% block main %}
 <div class="stack">
   <div>
     <div class="crumbs"><a href="/sites">Сайты</a> / <a href="/sites/{{ site.id }}">{{ site.url }}</a> /</div>
-    <h1>Настройки сайта</h1>
+    <h1>Параметры проверки</h1>
   </div>
   {% macro locked(code) %}<span class="muted small">с тарифа «{{ feature_plan[code] }}» · <a href="/billing">тарифы</a></span>{% endmacro %}
   <form class="card site-prefs" method="post" action="/sites/{{ site.id }}/settings">
