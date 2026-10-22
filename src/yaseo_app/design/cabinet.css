@@ -140,7 +140,7 @@ tr.row-link:hover .row-go, tr.row-link:focus-within .row-go { color: var(--accen
 .score-sm.red, .score-xs.red { color: var(--bad); } .score-sm.grey, .score-xs.grey { color: var(--none); }
 .delta { font-weight: 800; font-size: var(--size-small); }
 .up { color: var(--accent); } .down { color: #ff8a8f; }
-.spark-wrap { margin-left: auto; color: var(--ink-3); }
+.spark-wrap { margin-left: auto; color: var(--ink-3); display: grid; justify-items: end; gap: 4px; }
 .spark { display: block; }
 
 /* сравнение */

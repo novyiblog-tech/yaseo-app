@@ -217,7 +217,8 @@ def list_sites(conn: psycopg.Connection, user: dict) -> list[dict]:
         r["score"] = scores[-1] if scores else None
         known = [x for x in scores if x is not None]
         r["delta"] = known[-1] - known[-2] if len(known) >= 2 else None
-        r["spark"] = history.sparkline(scores)
+        # линия динамики нужна от трёх проверок: по двум это просто отрезок, и он похож на полосу хода
+        r["spark"] = history.sparkline(scores) if len(known) >= 3 else ""
     return rows
 
 
