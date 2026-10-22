@@ -211,6 +211,10 @@ class Provider:
         """Списание сохранённым способом без участия человека (автопродление)."""
         raise NotImplementedError
 
+    def refund(self, provider_id: str) -> None:
+        """Полный возврат денег по оплаченному платежу."""
+        raise NotImplementedError
+
     def saved_method(self, payment: dict) -> str | None:
         """Сохранённый способ оплаты покупателя, если сервис не прислал его сам."""
         return None
@@ -346,6 +350,20 @@ class TBankProvider(Provider):
             fields["Receipt"] = receipt
         out = self.call("Init", fields)
         return str(out["PaymentId"]), out["PaymentURL"]
+
+    def refund(self, provider_id):
+        """Полный возврат: Cancel с суммой платежа и чеком возврата (те же позиции, что в чеке
+        прихода). Статус платежа у нас меняет не этот вызов, а confirm по ответу банка."""
+        pay = self.conn.execute("SELECT * FROM payments WHERE provider = %s AND provider_id = %s",
+                                (self.name, provider_id)).fetchone()
+        if pay is None:
+            raise ValueError("Т-Банк: платёж не найден")
+        kopecks = int((Decimal(pay["amount_rub"]) * 100).to_integral_value())
+        fields = {"PaymentId": provider_id, "Amount": kopecks}
+        receipt = self._receipt(pay, kopecks)
+        if receipt:
+            fields["Receipt"] = receipt
+        self.call("Cancel", fields)
 
     def _status(self, st: str) -> str:
         return ("succeeded" if st in self.DONE else "refunded" if st in self.REFUNDED
@@ -571,6 +589,19 @@ def save_method(conn: psycopg.Connection, prov: Provider, provider_id: str, meth
                          (method, pay["user_id"], pay["plan"]))
 
 
+def refund_payment(conn: psycopg.Connection, prov: Provider, payment_id: int) -> dict:
+    """Вернуть деньги за оплаченный платёж через сервис и сразу сверить статус: если сервис
+    подтвердил возврат, платёж помечается, тариф отключается."""
+    pay = conn.execute("SELECT * FROM payments WHERE id = %s AND provider = %s",
+                       (payment_id, prov.name)).fetchone()
+    if pay is None:
+        raise Refused("Платёж не найден.")
+    if pay["status"] != "succeeded":
+        raise Refused("Вернуть можно только оплаченный платёж.")
+    prov.refund(pay["provider_id"])
+    return confirm(conn, prov, pay["provider_id"]) or pay
+
+
 def _refund(conn: psycopg.Connection, pay: dict) -> dict:
     """Деньги вернули: платёж помечается, тариф отключается. Продление отнимает только свой
     срок. Если после этого платежа уже была другая оплата, срок не трогаем."""
@@ -650,9 +681,14 @@ def set_auto_renew(conn: psycopg.Connection, user: dict, on: bool, consent: bool
 
 
 def payment_history(conn: psycopg.Connection, user: dict, limit: int = 20) -> list[dict]:
+    """Что видит человек: оплаченные и возвращённые платежи и не больше одной свежей
+    незавершённой попытки (до двух часов). Брошенные нажатия кнопки списком не показываем."""
     return conn.execute(
         "SELECT p.*, pl.title FROM payments p JOIN plans pl ON pl.code = p.plan"
-        " WHERE p.user_id = %s ORDER BY p.id DESC LIMIT %s", (user["id"], limit)).fetchall()
+        " WHERE p.user_id = %(u)s AND (p.status IN ('succeeded', 'refunded') OR p.id = ("
+        "   SELECT max(id) FROM payments WHERE user_id = %(u)s"
+        "   AND status IN ('pending', 'canceled') AND created_at > now() - interval '2 hours'))"
+        " ORDER BY p.id DESC LIMIT %(n)s", {"u": user["id"], "n": limit}).fetchall()
 
 
 # --- напоминания, автопродление, окончание срока -----------------------------------

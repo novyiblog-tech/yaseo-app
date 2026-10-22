@@ -125,3 +125,45 @@ class _Stub:
     def create(self, payment, return_url):
         self.prov.last = payment
         return "5", "u"
+
+
+class RefundTest(PgTestCase):
+    def setUp(self):
+        super().setUp()
+        self.p = billing.TBankProvider(self.conn, "Merchant", "11111111111111")
+        self.u = self.user()
+        self.pid = self.conn.execute(
+            "INSERT INTO payments (user_id, plan, amount_rub, purpose, provider, provider_id,"
+            " idempotence_key, status, months) VALUES (%s, 'start', 2990, 'purchase', 'tbank',"
+            " '55', 'k', 'succeeded', 1) RETURNING id", (self.u["id"],)).fetchone()["id"]
+
+    def test_cancel_sends_full_amount_and_refund_receipt(self):
+        with mock.patch.dict("os.environ", {"YASEO_TBANK_TAXATION": "usn_income"}), \
+                mock.patch.object(self.p, "call", return_value={"Status": "REFUNDED"}) as call:
+            self.p.refund("55")
+        method, f = call.call_args.args
+        self.assertEqual((method, f["PaymentId"], f["Amount"]), ("Cancel", "55", 299000))
+        self.assertEqual(f["Receipt"]["Taxation"], "usn_income")
+        self.assertEqual(f["Receipt"]["Items"][0]["Amount"], 299000)
+
+    def test_refund_payment_closes_plan_when_bank_confirms(self):
+        self.conn.execute("UPDATE users SET plan = 'start' WHERE id = %s", (self.u["id"],))
+        self.conn.execute(
+            "INSERT INTO subscriptions (user_id, plan, status, period_start, period_end, months)"
+            " VALUES (%s, 'start', 'active', now(), now() + interval '30 days', 1)", (self.u["id"],))
+        calls = []
+
+        def fake(method, fields):
+            calls.append(method)
+            return {"Status": "REFUNDED", "Amount": 299000}
+
+        with mock.patch.object(self.p, "call", side_effect=fake):
+            pay = billing.refund_payment(self.conn, self.p, self.pid)
+        self.assertEqual(calls, ["Cancel", "GetState"])
+        self.assertEqual(pay["status"], "refunded")
+
+    def test_refund_refuses_unpaid_payment(self):
+        from yaseo_app.accounts import Refused
+        self.conn.execute("UPDATE payments SET status = 'pending' WHERE id = %s", (self.pid,))
+        with self.assertRaises(Refused):
+            billing.refund_payment(self.conn, self.p, self.pid)
