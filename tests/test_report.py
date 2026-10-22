@@ -75,3 +75,38 @@ class PaidReportTest(unittest.TestCase):
         html = report.render(json.loads(FIXTURE.read_text(encoding="utf-8")))
         self.assertIn("В бесплатной проверке не измеряется", html)
         self.assertIn("Бесплатная проверка", html)
+
+
+class AiBriefTest(unittest.TestCase):
+    def setUp(self):
+        self.result = json.loads(FIXTURE.read_text(encoding="utf-8"))
+
+    def test_open_site_without_answers(self):
+        brief = report._ai_brief(self.result, None)
+        self.assertEqual(brief["readable"][0], "green")
+        self.assertIsNone(brief["mention"])
+        self.assertTrue(brief["fixes"], "что исправить берётся из находок по нейросетям")
+        self.assertLessEqual(len(brief["fixes"]), 4)
+
+    def test_blocked_search_bot_is_red(self):
+        for b in self.result["geo"]["bots"]:
+            if b["role"] == "search":
+                b["allowed"] = False
+        brief = report._ai_brief(self.result, None)
+        self.assertEqual(brief["readable"][0], "red")
+        self.assertIn("закрыт для нейросетей", brief["readable"][1])
+
+    def test_mention_summary_names_rivals(self):
+        paid = {"answers": {"items": [{"query": "a", "cited": False, "rivals": ["x.ru", "y.ru"]},
+                                      {"query": "b", "cited": False, "rivals": ["x.ru"]}]}}
+        text = report._ai_brief(self.result, paid)["mention"][1]
+        self.assertIn("ни разу не назвала", text)
+        self.assertIn("x.ru, y.ru", text)
+        paid["answers"]["items"][0]["cited"] = True
+        self.assertEqual(report._ai_brief(self.result, paid)["mention"][1],
+                         "Нейросеть Яндекса назвала ваш сайт в 1 из 2 ответов.")
+
+    def test_pdf_expands_developer_block(self):
+        html = report.render(self.result, expand=True)
+        self.assertIn('<details class="fold" open style="margin-top:24px">', html)
+        self.assertNotIn('<details class="fold" open', report.render(self.result).split("Для разработчика")[0][-120:])

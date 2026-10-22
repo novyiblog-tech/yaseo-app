@@ -122,30 +122,16 @@
 
 <section>
   <div class="sec-head"><span class="n">04</span><h2>Нейросети</h2></div>
-  <p class="muted" style="margin-bottom:20px">Могут ли нейросети прочитать сайт и понять, о чём он. Проверка без обращения к самим нейросетям.</p>
-  <table style="margin-bottom:20px">
-    <tr><th>Что</th><th>Состояние</th></tr>
-    <tr><td>robots.txt</td><td>{{ geo.robots_txt }}</td></tr>
-    <tr><td>llms.txt — путеводитель для нейросетей</td><td>{{ geo.llms_txt }}</td></tr>
-    <tr><td>llms-full.txt — полный текст</td><td>{{ geo.llms_full_txt }}</td></tr>
-  </table>
-  <h3 style="margin-bottom:10px">Боты нейросетей</h3>
-  <div class="bots">
-    {% for b in geo.bots %}
-    <div class="bot">
-      <div class="dot {{ 'green' if b.allowed else ('red' if b.role == 'search' else ('yellow' if b.role == 'user' else 'grey')) }}"></div>
-      <div><b>{{ b.owner }} · {{ b.token }}</b><span class="small muted">{{ {'search':'показ в ответах','user':'заход по просьбе пользователя','training':'обучение моделей'}[b.role] }} — {{ 'разрешён' if b.allowed else 'закрыт' }}</span></div>
-    </div>
-    {% endfor %}
+  <p class="muted" style="margin-bottom:18px">Всё больше людей спрашивают нейросеть вместо поиска. Здесь два вопроса: может ли нейросеть прочитать ваш сайт и называет ли она вас, когда отвечает на вопросы ваших клиентов.</p>
+  <div class="ai-brief">
+    <p><span class="dot {{ ai.readable[0] }}"></span><span>{{ ai.readable[1] }}</span></p>
+    {% if ai.mention %}<p><span class="dot {{ ai.mention[0] }}"></span><span>{{ ai.mention[1] }}</span></p>{% endif %}
   </div>
-  {% if geo.good %}
-  <h3 style="margin:20px 0 8px">Что уже хорошо</h3>
-  <div class="issues">{% for g in geo.good %}<div class="issue"><span class="tag" style="justify-self:start">есть</span><span class="small">{{ g }}</span></div>{% endfor %}</div>
-  {% endif %}
+
   {% set ans = (paid or {}).get('answers') %}
   {% if ans and ans['items'] %}
-  <h3 style="margin:24px 0 8px">Упоминает ли вас нейросеть Яндекса</h3>
-  <p class="muted" style="margin-bottom:14px">Называет ли нейросеть Яндекса ваш сайт, когда отвечает на эти фразы, и кого называет вместо вас.</p>
+  <h3 style="margin:24px 0 8px">Что отвечает нейросеть Яндекса</h3>
+  <p class="muted" style="margin-bottom:14px">Мы задали нейросети ваши фразы так, как их задал бы клиент. «Называет вас» значит, что сайт попал в её ответ как источник.</p>
   <table>
     <tr><th>Фраза</th><th>Называет вас</th>{% for w in rivals %}<th>{{ w }}</th>{% endfor %}<th>Кого называет вместо вас</th></tr>
     {% for it in ans['items'] %}<tr><td>{{ it.query }}</td>
@@ -154,6 +140,43 @@
       <td class="muted">{{ (it.rivals or [])|join(', ') }}</td></tr>{% endfor %}
   </table>
   {% endif %}
+
+  {% if ai.fixes %}
+  <h3 style="margin:28px 0 10px">Что исправить, чтобы нейросети лучше вас понимали</h3>
+  <ol class="ai-fixes">
+    {% for f in ai.fixes %}
+    <li><b>{{ f.title }}</b>{% if f.count > 1 %} <span class="muted small">(на {{ f.count }} стр.)</span>{% endif %}
+      <div class="small">{{ f.problem }}</div>
+      <div class="small"><b>Что сделать:</b> {{ f.action }}</div>
+      <div class="small muted">{{ f.effect }}</div></li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+
+  <details class="fold"{% if expand %} open{% endif %} style="margin-top:24px">
+    <summary>Для разработчика: файлы, роботы нейросетей, разметка</summary>
+    <p class="muted small" style="margin:10px 0 12px"><b>robots.txt</b> говорит роботам, куда им можно заходить. <b>llms.txt</b> и <b>llms-full.txt</b> — необязательные памятки для нейросетей: о чём сайт и где главные страницы. Разметка (JSON-LD) в коде страницы подсказывает нейросети, что это за компания, услуга или статья.</p>
+    <table style="margin-bottom:20px">
+      <tr><th>Что</th><th>Состояние</th></tr>
+      <tr><td>robots.txt</td><td>{{ geo.robots_txt }}</td></tr>
+      <tr><td>llms.txt — путеводитель для нейросетей</td><td>{{ geo.llms_txt }}</td></tr>
+      <tr><td>llms-full.txt — полный текст</td><td>{{ geo.llms_full_txt }}</td></tr>
+    </table>
+    <h3 style="margin-bottom:6px">Роботы нейросетей</h3>
+    <p class="muted small" style="margin-bottom:10px">«Показ в ответах» — робот ищет страницы, чтобы ссылаться на них в ответе. «Заход по просьбе пользователя» — человек сам попросил нейросеть открыть сайт. «Обучение моделей» — робот собирает тексты, чтобы учить нейросеть.</p>
+    <div class="bots">
+      {% for b in geo.bots %}
+      <div class="bot">
+        <div class="dot {{ 'green' if b.allowed else ('red' if b.role == 'search' else ('yellow' if b.role == 'user' else 'grey')) }}"></div>
+        <div><b>{{ b.owner }} · {{ b.token }}</b><span class="small muted">{{ {'search':'показ в ответах','user':'заход по просьбе пользователя','training':'обучение моделей'}.get(b.role, b.role) }} — {{ 'разрешён' if b.allowed else 'закрыт' }}</span></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% if geo.good %}
+    <h3 style="margin:20px 0 8px">Что уже хорошо</h3>
+    <div class="issues">{% for g in geo.good %}<div class="issue"><span class="tag" style="justify-self:start">есть</span><span class="small">{{ g }}</span></div>{% endfor %}</div>
+    {% endif %}
+  </details>
 </section>
 
 <section>

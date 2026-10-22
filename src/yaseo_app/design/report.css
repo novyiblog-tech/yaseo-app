@@ -145,3 +145,10 @@ tr.bad td { color: var(--bad); }
 .fold[open] > summary::before { transform: rotate(90deg); }
 .fold > table, .fold > .issues { margin: 0; padding: 0 16px 12px; }
 @media print { .fold > summary::before { content: none; } }
+
+/* Раздел «Нейросети»: вердикт простыми словами и список «что исправить» */
+.ai-brief { display: grid; gap: 12px; }
+.ai-brief p { display: flex; gap: 12px; align-items: baseline; font-size: 18px; line-height: 1.4; font-weight: 600; }
+.ai-brief .dot { flex: none; transform: translateY(2px); }
+.ai-fixes { margin: 0; padding-left: 22px; display: grid; gap: 14px; }
+.ai-fixes li > b { display: block; margin-bottom: 4px; }

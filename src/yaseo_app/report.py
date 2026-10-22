@@ -84,6 +84,57 @@ def _issue_rows(result: dict) -> list[dict]:
     return rows
 
 
+def _ai_brief(result: dict, paid: dict | None) -> dict:
+    """Раздел «Нейросети» человеческим языком: можно ли читать сайт, называют ли вас,
+    что исправить. Технические таблицы остаются ниже, для разработчика."""
+    from collections import Counter
+
+    geo = result["geo"]
+    bots = geo.get("bots") or []
+    issues = geo.get("issues") or []
+    blocked = [f'{b["owner"]} ({b["token"]})' for b in bots if b.get("role") == "search" and not b.get("allowed")]
+    home_down = any(i["code"] == "page-unavailable" and i["severity"] == "critical" for i in issues)
+    if home_down or not (geo.get("pages") or []):
+        readable = ("red", "Нейросети не смогли открыть главную страницу сайта, поэтому оценить доступ не удалось.")
+    elif blocked:
+        readable = ("red", "Сайт закрыт для нейросетей: " + ", ".join(blocked) +
+                    ". Они не смогут показывать его в своих ответах.")
+    else:
+        readable = ("green", "Нейросети могут читать ваш сайт: доступ им открыт.")
+
+    mention = None
+    items = [i for i in ((paid or {}).get("answers") or {}).get("items") or [] if "error" not in i]
+    if items:
+        cited = sum(1 for i in items if i.get("cited"))
+        n = len(items)
+        if cited:
+            mention = (("green" if cited == n else "yellow"),
+                       f"Нейросеть Яндекса назвала ваш сайт в {cited} из {n} ответов.")
+        else:
+            top = [d for d, _ in Counter(d for i in items for d in i.get("rivals") or []).most_common(3)]
+            tail = " Чаще всего вместо вас она называет: " + ", ".join(top) + "." if top else ""
+            mention = ("red", f"По всем {n} фразам нейросеть Яндекса ни разу не назвала ваш сайт." + tail
+                       if n > 1 else "По вашей фразе нейросеть Яндекса не назвала ваш сайт." + tail)
+
+    roles = {b["token"].lower(): b["role"] for b in bots}
+    order = {"critical": 0, "major": 1, "minor": 2}
+    groups: dict[str, dict] = {}
+    for i in issues:
+        token = i["code"].removeprefix("robots-blocks-") if i["code"].startswith("robots-blocks-") else ""
+        e = glossary.ai_entry(i["code"], roles.get(token))
+        if e is None:
+            continue
+        g = groups.setdefault(i["code"], {"entry": e, "severity": i["severity"], "count": 0})
+        g["count"] += 1
+        if order.get(i["severity"], 9) < order.get(g["severity"], 9):
+            g["severity"] = i["severity"]
+    fixes = sorted(groups.values(), key=lambda g: (order.get(g["severity"], 9), -g["count"]))[:4]
+    return {"readable": readable, "mention": mention,
+            "fixes": [{"title": g["entry"].title, "problem": g["entry"].problem,
+                       "action": g["entry"].action, "effect": g["entry"].effect,
+                       "count": g["count"]} for g in fixes]}
+
+
 def render(result: dict, assessment: score.Assessment | None = None,
            kind: str = "Бесплатная проверка", max_pages: int = 20,
            back_url: str | None = None, brand: dict | None = None,
@@ -116,6 +167,7 @@ def render(result: dict, assessment: score.Assessment | None = None,
         paid=paid,
         rivals=rivals or [],
         region_label=region_label,
+        ai=_ai_brief(result, paid),
     )
     return _nbsp_numbers(html)
 
