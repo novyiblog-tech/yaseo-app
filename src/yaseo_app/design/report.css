@@ -96,11 +96,18 @@ section:last-of-type { border-bottom: 0; }
 .pending h3 { color: var(--ink-2); }
 
 /* таблицы */
-table { width: 100%; border-collapse: collapse; font-size: var(--size-small); }
-th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table { width: 100%; border-collapse: collapse; font-size: 16px; }
+th, td { text-align: left; padding: 16px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font-size: var(--size-micro); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); font-weight: 700; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 tr.bad td { color: var(--bad); }
+td.q { font-weight: 600; color: var(--ink); width: 34%; }
+.rank { display: inline-block; min-width: 44px; text-align: center; padding: 4px 12px; border-radius: 999px; font-weight: 800; font-variant-numeric: tabular-nums; background: var(--surface-2); color: var(--ink-2); }
+.rank.ok { background: var(--ok); color: #fff; }
+.rank.warn { background: var(--warn); color: #fff; }
+.rank.bad { background: var(--bad); color: #fff; }
+.tops { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+.tops span { padding: 3px 10px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 14px; }
 .status { display: inline-block; min-width: 34px; text-align: center; padding: 1px 6px; border-radius: 4px; background: var(--surface-2); font-family: var(--font-mono); font-size: 12px; }
 .status.err { background: var(--bad); color: #fff; }
 

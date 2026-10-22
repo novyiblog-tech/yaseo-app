@@ -68,7 +68,7 @@ class PaidReportTest(unittest.TestCase):
         html = report.render(result, a, kind="Полный аудит", paid=paid)
         self.assertIn("Полный аудит", html)
         self.assertNotIn("В бесплатной проверке не измеряется", html)
-        for needle in ("12\u00a0906", "a.ru, b.ru", "Называет вас", "x.ru"):
+        for needle in ("12\u00a0906", "<span>a.ru</span><span>b.ru</span>", "Называет вас", "x.ru"):
             self.assertIn(needle, html)
 
     def test_free_report_keeps_placeholders(self):

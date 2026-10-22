@@ -107,10 +107,10 @@
   <p class="muted" style="margin-bottom:14px">На каком месте ваш сайт в поиске Яндекса по каждой фразе и кто стоит в самом верху{% if region_label %}. Выдача: {{ region_label }}{% endif %}.</p>
   <table>
     <tr><th>Фраза</th><th class="num">Ваше место</th>{% for w in rivals %}<th class="num">{{ w }}</th>{% endfor %}<th>Кто на первых местах</th></tr>
-    {% for it in pos['items'] %}<tr><td>{{ it.query }}</td>
-      <td class="num">{% if it.error %}ошибка{% else %}{{ it.position or 'нет в топ-10' }}{% endif %}</td>
+    {% for it in pos['items'] %}<tr><td class="q">{{ it.query }}</td>
+      <td class="num">{% if it.error %}<span class="rank">ошибка</span>{% elif it.position %}<span class="rank {{ 'ok' if it.position <= 3 else ('warn' if it.position <= 10 else 'bad') }}">{{ it.position }}</span>{% else %}<span class="rank bad">нет в топ-10</span>{% endif %}</td>
       {% for w in rivals %}<td class="num muted">{{ (it.watched or {}).get(w) or '—' }}</td>{% endfor %}
-      <td class="muted">{{ (it.top3 or [])|join(', ') }}</td></tr>{% endfor %}
+      <td><div class="tops">{% for d in (it.top3 or []) %}<span>{{ d }}</span>{% endfor %}</div></td></tr>{% endfor %}
   </table>
   {% else %}
   <div class="pending">
