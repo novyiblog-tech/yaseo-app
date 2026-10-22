@@ -48,7 +48,7 @@ SECTION_STATUS = {"ok": "собран", "partial": "собран частичн�
                   "failed": "не собран", "off": "выключен"}
 
 CSP = ("default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-       "font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self' https://securepay.tinkoff.ru https://*.tbank.ru https://*.tinkoff.ru; "
+       "font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self' https://securepay.tinkoff.ru https://*.tbank.ru https://*.tinkoff.ru https://*.tbank-online.com; "
        "frame-ancestors 'none'; base-uri 'none'")
 
 
