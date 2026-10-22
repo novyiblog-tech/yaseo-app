@@ -158,5 +158,11 @@
   {% endfor %}
 
   {% endif %}
+  {% if job.status not in ('queued', 'running') %}
+  <form method="post" action="/jobs/{{ job.id }}/delete" data-confirm="Удалить эту проверку и её отчёт? Это нельзя отменить.">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
+    <button class="linkbtn small" type="submit">Удалить эту проверку</button>
+  </form>
+  {% endif %}
 </div>
 {% endblock %}

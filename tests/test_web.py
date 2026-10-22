@@ -146,6 +146,32 @@ class WebTest(PgTestCase):
         self.assertEqual(rep.status_code, 200)
         self.assertIn('data-theme="light"', rep.text)
 
+        # удаление готовой проверки: она и отчёт исчезают, журнал расхода остаётся без привязки
+        job_id = int(job_url.rsplit("/", 1)[1])
+        self.assertIn("Удалить эту проверку", r.text)
+        before = self.conn.execute("SELECT count(*) AS n FROM spend WHERE job_id = %s",
+                                   (job_id,)).fetchone()["n"]
+        gone = self.client.post(f"/jobs/{job_id}/delete", data={"csrf": csrf(site_html)},
+                                follow_redirects=False)
+        self.assertEqual((gone.status_code, gone.headers["location"]), (303, site_url.replace("http://testserver", "")))
+        self.assertEqual(self.client.get(job_url).status_code, 404)
+        self.assertEqual(self.client.get(job_url + "/report").status_code, 404)
+        self.assertEqual(self.conn.execute("SELECT count(*) AS n FROM spend WHERE job_id = %s",
+                                           (job_id,)).fetchone()["n"], 0)
+        if before:
+            self.assertGreater(self.conn.execute("SELECT count(*) AS n FROM spend WHERE job_id IS NULL"
+                                                 ).fetchone()["n"], 0)
+
+    def test_running_check_cannot_be_deleted(self):
+        self.signup()
+        page = self.client.get("/sites").text
+        r = self.client.post("/sites", data={"url": self.url, "csrf": csrf(page)})
+        r = self.client.post(str(r.url) + "/run", data={"csrf": csrf(r.text)})
+        job_id = int(str(r.url).rsplit("/", 1)[1]) if "/jobs/" in str(r.url) else None
+        jid = job_id or self.conn.execute("SELECT max(id) AS i FROM jobs").fetchone()["i"]
+        denied = self.client.post(f"/jobs/{jid}/delete", data={"csrf": csrf(page)})
+        self.assertEqual(denied.status_code, 409)
+
     def test_other_users_data_is_invisible(self):
         self.signup()
         page = self.client.get("/sites").text

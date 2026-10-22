@@ -681,6 +681,16 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
             raise HTTPException(status_code=403, detail=str(exc))
         return RedirectResponse(f"/jobs/{job_id}", status_code=303)
 
+    @app.post("/jobs/{job_id}/delete")
+    def job_delete(job_id: int, csrf: str = Form(""), user=Depends(current), c=Depends(conn)):
+        check_csrf(user, csrf)
+        job = own_job(c, user, job_id)
+        try:
+            site_id = accounts.delete_job(c, user, job_id)
+        except Refused as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+        return RedirectResponse(f"/sites/{site_id}" if site_id else "/sites", status_code=303)
+
     @app.post("/jobs/{job_id}/unshare")
     def job_unshare(job_id: int, csrf: str = Form(""), user=Depends(current), c=Depends(conn)):
         check_csrf(user, csrf)

@@ -234,6 +234,21 @@ def delete_site(conn: psycopg.Connection, user: dict, site_id: int) -> None:
         conn.execute("DELETE FROM sites WHERE id = %s AND user_id = %s", (site_id, user["id"]))
 
 
+def delete_job(conn: psycopg.Connection, user: dict, job_id: int) -> int | None:
+    """Удалить готовую или неудавшуюся проверку вместе с отчётом и ссылкой на него.
+    Записи журнала расхода остаются, но без привязки к проверке (деньги уже потрачены).
+    Возвращает сайт, на который вернуть человека."""
+    job = get_job(conn, user, job_id)
+    if job is None:
+        raise Refused("Проверка не найдена.")
+    if job["status"] in ("queued", "running"):
+        raise Refused("Дождитесь конца проверки, потом удаляйте.")
+    with conn.transaction():
+        conn.execute("UPDATE spend SET job_id = NULL WHERE job_id = %s", (job_id,))
+        conn.execute("DELETE FROM jobs WHERE id = %s AND user_id = %s", (job_id, user["id"]))
+    return job.get("site_id")
+
+
 def previous_done(conn: psycopg.Connection, job: dict) -> dict | None:
     """Прошлая готовая проверка того же сайта — для сравнения."""
     if not job.get("site_id"):

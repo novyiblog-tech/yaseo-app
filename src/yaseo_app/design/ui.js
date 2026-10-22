@@ -233,3 +233,10 @@
     });
   });
 })();
+
+// Подтверждение опасных действий: форме с data-confirm перед отправкой задаём вопрос.
+// (Встроенный onsubmit запрещён политикой безопасности сайта.)
+document.addEventListener("submit", function (e) {
+  var q = e.target && e.target.getAttribute && e.target.getAttribute("data-confirm");
+  if (q && !window.confirm(q)) e.preventDefault();
+}, true);
