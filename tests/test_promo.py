@@ -155,7 +155,7 @@ class PromoTest(PgTestCase):
             robots = c.get("/robots.txt").text
             self.assertIn("Disallow: /", robots)
             self.assertIn("Sitemap:", robots)
-            self.assertIn("Пример на тестовом сайте", c.get("/example").text)
+            self.assertIn("Пример полного аудита на тестовом сайте", c.get("/example").text)
 
 
 class PlansAndOfferTest(PgTestCase):
