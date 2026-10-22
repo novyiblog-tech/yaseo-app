@@ -3,7 +3,10 @@
 (function () {
   if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) return;
 
+  var SEARCH_FROM = 40;  // длинные списки (города) получают строку поиска
   var openBox = null;
+
+  function norm(t) { return t.toLowerCase().replace(/ё/g, "е"); }
 
   function close(box, focusBtn) {
     if (!box) return;
@@ -24,10 +27,30 @@
     btn.className = "dd-btn";
     btn.setAttribute("aria-haspopup", "listbox");
     btn.setAttribute("aria-expanded", "false");
+    var pop = document.createElement("div");
+    pop.className = "dd-pop";
+    var search = null, empty = null;
+    if (select.options.length > SEARCH_FROM) {
+      search = document.createElement("input");
+      search.type = "text";
+      search.className = "dd-search";
+      search.placeholder = "Начните вводить название";
+      search.setAttribute("autocomplete", "off");
+      search.setAttribute("aria-label", "Поиск по списку");
+      pop.appendChild(search);
+    }
     var list = document.createElement("ul");
     list.className = "dd-list";
     list.setAttribute("role", "listbox");
     list.tabIndex = -1;
+    pop.appendChild(list);
+    if (search) {
+      empty = document.createElement("div");
+      empty.className = "dd-empty";
+      empty.textContent = "Ничего не найдено";
+      empty.hidden = true;
+      pop.appendChild(empty);
+    }
 
     var items = [];
     Array.prototype.forEach.call(select.options, function (o, i) {
@@ -36,6 +59,7 @@
       li.setAttribute("role", "option");
       li.textContent = o.textContent;
       li.dataset.i = i;
+      li.dataset.t = norm(o.textContent);
       li.addEventListener("mousedown", function (e) { e.preventDefault(); });
       li.addEventListener("click", function () { choose(i); close(box, true); });
       list.appendChild(li);
@@ -59,51 +83,77 @@
       active = i;
       paint();
     }
-    function move(i) {
-      active = Math.max(0, Math.min(items.length - 1, i));
+    function visible() { return items.filter(function (li) { return !li.hidden; }); }
+    function show_(i) {
+      active = i;
       paint();
       items[active].scrollIntoView({ block: "nearest" });
     }
-    function show() {
+    function step(dir) {
+      var j = active + dir;
+      while (j >= 0 && j < items.length && items[j].hidden) j += dir;
+      if (j >= 0 && j < items.length) show_(j);
+    }
+    function edge(first) {
+      var v = visible();
+      if (v.length) show_(parseInt(v[first ? 0 : v.length - 1].dataset.i, 10));
+    }
+    function filter() {
+      var q = norm(search.value.trim());
+      items.forEach(function (li) { li.hidden = q !== "" && li.dataset.t.indexOf(q) === -1; });
+      var v = visible();
+      empty.hidden = v.length > 0;
+      if (v.length && items[active].hidden) show_(parseInt(v[0].dataset.i, 10));
+      else paint();
+    }
+    function open() {
       if (openBox && openBox !== box) close(openBox);
+      if (search) { search.value = ""; items.forEach(function (li) { li.hidden = false; }); empty.hidden = true; }
       active = select.selectedIndex;
       paint();
       box.classList.add("open");
       btn.setAttribute("aria-expanded", "true");
       openBox = box;
       items[active].scrollIntoView({ block: "nearest" });
+      if (search) search.focus();
     }
 
-    btn.addEventListener("click", function () {
-      if (box.classList.contains("open")) close(box); else show();
-    });
-    btn.addEventListener("keydown", function (e) {
+    function onKey(e) {
       var isOpen = box.classList.contains("open");
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        if (!isOpen) show(); else move(active + (e.key === "ArrowDown" ? 1 : -1));
-      } else if (e.key === "Home" && isOpen) { e.preventDefault(); move(0); }
-      else if (e.key === "End" && isOpen) { e.preventDefault(); move(items.length - 1); }
-      else if ((e.key === "Enter" || e.key === " ") && isOpen) {
+        if (!isOpen) open(); else step(e.key === "ArrowDown" ? 1 : -1);
+      } else if (e.key === "Home" && isOpen && e.target === btn) { e.preventDefault(); edge(true); }
+      else if (e.key === "End" && isOpen && e.target === btn) { e.preventDefault(); edge(false); }
+      else if ((e.key === "Enter" || (e.key === " " && e.target === btn)) && isOpen) {
         e.preventDefault(); choose(active); close(box, true);
       } else if (e.key === "Escape" && isOpen) { e.preventDefault(); close(box, true); }
       else if (e.key === "Tab" && isOpen) { close(box); }
-      else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        var ch = e.key.toLowerCase();
+      else if (e.target === btn && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (search) { e.preventDefault(); if (!isOpen) open(); search.value = e.key; filter(); return; }
+        var ch = norm(e.key);
         for (var k = 1; k <= items.length; k++) {
           var j = (active + k) % items.length;
-          if (items[j].textContent.toLowerCase().indexOf(ch) === 0) {
-            if (!isOpen) show();
-            move(j);
+          if (items[j].dataset.t.indexOf(ch) === 0) {
+            if (!isOpen) open();
+            show_(j);
             break;
           }
         }
       }
+    }
+    btn.addEventListener("click", function () {
+      if (box.classList.contains("open")) close(box); else open();
     });
+    btn.addEventListener("keydown", onKey);
+    if (search) {
+      search.addEventListener("input", filter);
+      search.addEventListener("keydown", onKey);
+    }
 
     select.parentNode.insertBefore(box, select);
     box.appendChild(btn);
-    box.appendChild(list);
+    box.appendChild(pop);
     box.appendChild(select);
     select.classList.add("dd-native");
     select.tabIndex = -1;

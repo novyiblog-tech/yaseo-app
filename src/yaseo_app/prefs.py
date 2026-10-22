@@ -25,6 +25,21 @@ REGIONS = (
     (55, "Тюмень"), (44, "Ижевск"), (63, "Иркутск"), (76, "Хабаровск"), (75, "Владивосток"),
     (16, "Ярославль"), (22, "Калининград"), (15, "Тула"), (239, "Сочи"),
 )
+# Весь справочник регионов Вордстата (scripts/build_regions.py): сначала частые города
+# списком выше, дальше остальные по алфавиту, чтобы любой город или регион (например, Крым)
+# находился в настройках сайта.
+def _all_regions() -> tuple:
+    import json
+    from pathlib import Path
+    path = Path(__file__).with_name("regions.json")
+    if not path.exists():
+        return REGIONS
+    seen = {c for c, _ in REGIONS}
+    rest = [(c, n) for c, n in json.loads(path.read_text(encoding="utf-8")) if c not in seen]
+    return REGIONS + tuple(sorted(rest, key=lambda r: r[1]))
+
+
+REGIONS = _all_regions()
 REGION_NAMES = dict(REGIONS)
 SCHEDULES = {"off": "не проверять сам", "week": "раз в неделю", "month": "раз в месяц"}
 SECTIONS = ("demand", "positions", "answers")
