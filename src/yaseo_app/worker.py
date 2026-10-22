@@ -60,6 +60,10 @@ def until_window(now: datetime | None = None) -> timedelta:
     return midnight - now
 
 
+# Метка «все кабинеты»: исполнитель запущен на живых источниках целиком.
+ALL_USERS = "*"
+
+
 def live_emails(raw: str | None = None) -> set[str]:
     raw = os.environ.get("YASEO_LIVE_EMAILS", "") if raw is None else raw
     return {e.strip().lower() for e in raw.replace(";", ",").split(",") if e.strip()}
@@ -76,7 +80,7 @@ def run_once(conn: psycopg.Connection, worker_id: str, srcs: dict,
     if job is None:
         return None
     user = conn.execute("SELECT * FROM users WHERE id = %s", (job["user_id"],)).fetchone()
-    if live and user["email"].lower() in live_users:
+    if live and (ALL_USERS in live_users or user["email"].lower() in live_users):
         # Проверку клиент ждёт на экране: она идёт синхронно в любое время. Ежедневные
         # позиции берут дешёвые отложенные запросы, которые принимаются только ночью.
         wait = until_window() if job["kind"] == "positions" else timedelta(0)
@@ -141,6 +145,8 @@ def main(argv: list[str] | None = None) -> int:
     srcs = sources.build(args.sources, keys)
     users = live_emails()
     live = None
+    if args.sources == "live":
+        live, users = srcs, {ALL_USERS}
     if users and args.sources == "fake":
         try:
             live = sources.build("live", keys)

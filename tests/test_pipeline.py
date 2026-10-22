@@ -146,6 +146,17 @@ class LiveWindowTest(PipelineTest):
         self.assertEqual(job["status"], "queued")
         self.assertIn("ночном окне", job["error"])
 
+    def test_live_for_everyone_postpones_daytime_positions(self):
+        from datetime import timedelta
+        from unittest import mock
+        u = self.user(f"any-{secrets.token_hex(3)}@t", "free")
+        jid = jobs.enqueue(self.conn, u["id"], "positions", {"day": "2026-10-22"})
+        with mock.patch.object(worker, "until_window", return_value=timedelta(hours=5)):
+            worker.run_once(self.conn, "w-test", {"x": object()}, allow_private=True,
+                            live={"x": object()}, live_users={worker.ALL_USERS})
+        job = self.conn.execute("SELECT * FROM jobs WHERE id = %s", (jid,)).fetchone()
+        self.assertEqual(job["status"], "queued")
+
     def test_other_users_unaffected(self):
         jid = self._enqueue(f"plain-{secrets.token_hex(3)}@t")
         worker.run_once(self.conn, "w-test", sources.build("fake"), allow_private=True,

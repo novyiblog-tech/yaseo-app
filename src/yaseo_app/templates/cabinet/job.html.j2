@@ -31,9 +31,6 @@
   </div>
   {% else %}
   {% set r = job.result %}
-  {% if r.sources_mode == 'fake' %}
-  <div class="note fake">Данные о спросе, позициях и ответах нейросети — виртуальные: сервис работает в тестовом режиме, без обращений к Яндексу.</div>
-  {% endif %}
 
   <section class="card">
     <div class="hero">
