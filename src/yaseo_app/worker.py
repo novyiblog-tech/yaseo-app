@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import signal
 import socket
 import time
 from datetime import datetime, timedelta, timezone
@@ -39,6 +40,15 @@ def load_keys(env_file: Path | None) -> dict[str, str]:
 
 MSK = timezone(timedelta(hours=3))
 WINDOW_END_HOUR = 6  # окно отложенных запросов Search API: 00:00–06:00 МСК
+
+
+class Stopping(BaseException):
+    """Исполнитель остановили (SIGTERM при выкладке или перезапуске). Не Exception: обычные
+    `except Exception` её не ловят, задача успевает вернуться в очередь."""
+
+
+def _on_term(signum, frame):
+    raise Stopping()
 
 
 def until_window(now: datetime | None = None) -> timedelta:
@@ -84,6 +94,11 @@ def run_once(conn: psycopg.Connection, worker_id: str, srcs: dict,
             result = watch.run_health(conn, job, allow_private=allow_private)
         else:
             raise ValueError(f"неизвестный вид задачи «{job['kind']}»")
+    except Stopping:
+        # Остановили посреди задачи: вернуть в очередь сразу, а не ждать конца аренды (до 20 минут).
+        jobs.postpone(conn, job, timedelta(0), "исполнитель перезапускался, продолжим сами")
+        log.info("задача %s возвращена в очередь: исполнитель останавливается", job["id"])
+        raise
     except pipeline.Postpone as exc:
         jobs.postpone(conn, job, exc.delay, str(exc))
         log.info("задача %s отложена на %s: %s", job["id"], exc.delay, exc)
@@ -135,12 +150,17 @@ def main(argv: list[str] | None = None) -> int:
     conn = db.connect()
     db.migrate(conn)
     log.info("исполнитель %s, источники %s", worker_id, args.sources)
-    while True:
-        job = run_once(conn, worker_id, srcs, args.allow_private, live, users)
-        if args.once:
-            return 0
-        if job is None:
-            time.sleep(args.poll)
+    signal.signal(signal.SIGTERM, _on_term)
+    try:
+        while True:
+            job = run_once(conn, worker_id, srcs, args.allow_private, live, users)
+            if args.once:
+                return 0
+            if job is None:
+                time.sleep(args.poll)
+    except Stopping:
+        log.info("исполнитель %s остановлен", worker_id)
+        return 0
 
 
 if __name__ == "__main__":

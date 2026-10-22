@@ -152,3 +152,17 @@ class LiveWindowTest(PipelineTest):
                         live={"x": object()}, live_users={"other@t"})
         self.assertEqual(self.conn.execute("SELECT status FROM jobs WHERE id = %s",
                                            (jid,)).fetchone()["status"], "done")
+
+
+class StopTest(PipelineTest):
+    def test_stop_mid_job_returns_it_to_queue_at_once(self):
+        from unittest import mock
+        u = self.user(f"stop-{secrets.token_hex(3)}@t", "free")
+        jid = jobs.enqueue(self.conn, u["id"], "audit", {"url": self.url, "max_pages": 5, "queries": []})
+        with mock.patch.object(pipeline, "run_audit", side_effect=worker.Stopping):
+            with self.assertRaises(worker.Stopping):
+                worker.run_once(self.conn, "w-stop", sources.build("fake"), allow_private=True)
+        job = self.conn.execute("SELECT * FROM jobs WHERE id = %s", (jid,)).fetchone()
+        self.assertEqual((job["status"], job["attempts"]), ("queued", 0))
+        self.assertIsNone(job["locked_by"])
+        self.assertLessEqual(job["run_after"], self.conn.execute("SELECT now() AS t").fetchone()["t"])
