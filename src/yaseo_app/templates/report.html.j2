@@ -183,6 +183,18 @@
   <div class="sec-head"><span class="n">05</span><h2>Техника по страницам</h2></div>
   <p class="muted" style="margin-bottom:16px">Для специалиста: что увидел робот на каждой проверенной странице.</p>
   <details class="fold"{% if expand %} open{% endif %}>
+  <summary>Все находки <span class="muted">— {{ issues|length }}</span></summary>
+  <div class="issues">
+    {% for i in issues %}
+    <div class="issue">
+      <span class="tag {{ {'critical':'bad','major':'warn','minor':'quiet'}[i.severity] }}" style="justify-self:start">{{ {'critical':'срочно','major':'важно','minor':'мелочь'}[i.severity] }}</span>
+      <div><b>{{ i.title }}</b> <span class="mono muted">{{ i.url|short }}</span><div class="muted">{{ i.evidence }}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+  </details>
+
+  <details class="fold"{% if expand %} open{% endif %}>
   <summary>Таблица страниц <span class="muted">— {{ pages|length }}</span></summary>
   <table>
     <tr><th>Страница</th><th>Код</th><th class="num">Заголовок</th><th class="num">Описание</th><th class="num">H1</th><th>Основной адрес</th><th class="num">Слов</th><th class="num">Картинок без подписи</th></tr>
@@ -199,18 +211,6 @@
     </tr>
     {% endfor %}
   </table>
-  </details>
-
-  <details class="fold"{% if expand %} open{% endif %}>
-  <summary>Все находки <span class="muted">— {{ issues|length }}</span></summary>
-  <div class="issues">
-    {% for i in issues %}
-    <div class="issue">
-      <span class="tag {{ {'critical':'bad','major':'warn','minor':'quiet'}[i.severity] }}" style="justify-self:start">{{ {'critical':'срочно','major':'важно','minor':'мелочь'}[i.severity] }}</span>
-      <div><b>{{ i.title }}</b> <span class="mono muted">{{ i.url|short }}</span><div class="muted">{{ i.evidence }}</div></div>
-    </div>
-    {% endfor %}
-  </div>
   </details>
 </section>
 
