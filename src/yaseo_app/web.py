@@ -660,7 +660,7 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
         cur = billing.current(c, user)
         shown = cur["plan"]["steps_shown"]
         if job["status"] == "done":
-            assessment = score.assess(job["result"]["free"])
+            assessment = score.assess(job["result"]["free"], paid=job["result"].get("paid"))
             prev = accounts.previous_done(c, job)
             if prev:
                 diff = history.compare(prev["result"], job["result"])
@@ -705,13 +705,20 @@ def create_app(dsn: str | None = None, allow_private: bool | None = None,
 
     def _report_html(c, user, job, back: bool = True, expand: bool = False) -> str:
         free = job["result"]["free"]
-        a = score.assess(free)
+        paid = job["result"].get("paid")
+        a = score.assess(free, paid=paid)
         shown = billing.current(c, user)["plan"]["steps_shown"]
         if shown is not None:
             a.steps = a.steps[:shown]
+        full = bool(paid) and any((s or {}).get("status") not in (None, "skipped", "off")
+                                  for s in paid.values())
+        region = job["result"].get("region")
         return report.render(free, a, max_pages=job["params"].get("max_pages", 20),
                              back_url=f"/jobs/{job['id']}" if back else None,
-                             brand=prefs.brand(c, user), expand=expand)
+                             brand=prefs.brand(c, user), expand=expand,
+                             kind="Полный аудит" if full else "Бесплатная проверка",
+                             paid=paid if full else None, rivals=job["result"].get("rivals"),
+                             region_label=prefs.region_name(region) if region and region != 225 else None)
 
     @app.get("/jobs/{job_id}/report.pdf")
     def job_pdf(job_id: int, user=Depends(current), c=Depends(conn)):

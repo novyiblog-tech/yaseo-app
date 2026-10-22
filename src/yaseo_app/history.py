@@ -5,7 +5,7 @@ from yaseo_app import glossary, score
 
 
 def summarize(result: dict) -> dict:
-    a = score.assess(result["free"])
+    a = score.assess(result["free"], paid=result.get("paid"))
     return {"score": a.total, "lights": {l.key: l.score for l in a.lights}}
 
 

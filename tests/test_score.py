@@ -111,3 +111,34 @@ class GlossaryCoversEngineTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class YandexLightTest(unittest.TestCase):
+    def paid(self, *positions, status="ok"):
+        return {"positions": {"status": status,
+                              "items": [{"query": f"q{i}", "position": p} for i, p in enumerate(positions)]}}
+
+    def test_free_check_is_grey(self):
+        light = score.yandex_light(None)
+        self.assertIsNone(light.score)
+        self.assertIn("бесплатной", light.note)
+
+    def test_points_by_position(self):
+        self.assertEqual([score.position_points(p) for p in (1, 3, 4, 10, 11, 20, 21, 50, 51, None)],
+                         [100, 100, 70, 70, 40, 40, 15, 15, 0, 0])
+
+    def test_average_over_phrases_and_note(self):
+        light = score.yandex_light(self.paid(1, 8, None, None))
+        self.assertEqual(light.score, round((100 + 70 + 0 + 0) / 4))
+        self.assertEqual(light.note, "в первой десятке 2 из 4 фраз")
+
+    def test_no_phrases_is_grey_not_zero(self):
+        light = score.yandex_light({"positions": {"status": "skipped", "items": [],
+                                                  "reason": "фразы не заданы"}})
+        self.assertIsNone(light.score)
+
+    def test_paid_light_enters_total(self):
+        base = result([], [])
+        free_total = score.assess(base).total
+        with_paid = score.assess(base, paid=self.paid(None, None)).total
+        self.assertLess(with_paid, free_total, "нулевые позиции тянут общую оценку вниз")

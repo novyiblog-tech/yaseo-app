@@ -129,9 +129,41 @@ def ai_light(geo: dict) -> Light:
                  f"проверено: {len(pages)} {_pages(len(pages))}")
 
 
-def yandex_light(result: dict) -> Light:
-    return Light("yandex", "Яндекс", None, "grey", {"critical": 0, "major": 0, "minor": 0},
-                 "в бесплатной проверке не измеряется")
+#: Очки за место по фразе: первая тройка — полный балл, дальше меньше, вне проверяемой глубины — ноль.
+POSITION_POINTS = ((3, 100), (10, 70), (20, 40), (50, 15))
+
+
+def position_points(position) -> int:
+    if not position:
+        return 0
+    for limit, points in POSITION_POINTS:
+        if position <= limit:
+            return points
+    return 0
+
+
+def yandex_light(paid: dict | None = None) -> Light:
+    """Яндекс — видимость в выдаче по фразам клиента: среднее очков за место. Без платных
+    данных (бесплатная проверка, фраз нет, источник не ответил) остаётся серым."""
+    none = {"critical": 0, "major": 0, "minor": 0}
+    if paid is None:
+        return Light("yandex", "Яндекс", None, "grey", none, "в бесплатной проверке не измеряется")
+    sec = paid.get("positions") or {}
+    items = [i for i in sec.get("items") or [] if "error" not in i]
+    if sec.get("status") == "off":
+        return Light("yandex", "Яндекс", None, "grey", none, "выключено в настройках сайта")
+    if not items:
+        return Light("yandex", "Яндекс", None, "grey", none,
+                     "не измерено: " + (sec.get("reason") or "фразы не заданы"))
+    points = round(sum(position_points(i.get("position")) for i in items) / len(items))
+    top10 = sum(1 for i in items if i.get("position") and i["position"] <= 10)
+    return Light("yandex", "Яндекс", points, color_of(points), none,
+                 f"в первой десятке {top10} из {len(items)} {_phrases(len(items))}")
+
+
+def _phrases(n: int) -> str:
+    """После «из N»: из 1 фразы, из 4 фраз, из 21 фразы."""
+    return "фразы" if n % 10 == 1 and n % 100 != 11 else "фраз"
 
 
 def total_score(lights: list[Light]) -> int | None:
@@ -181,8 +213,8 @@ def build_steps(result: dict, limit: int = 7) -> list[Step]:
 STUB_NOTE = "сайт показал роботу заглушку защиты — оценка была бы недостоверной"
 
 
-def assess(result: dict, limit: int = 7) -> Assessment:
-    lights = [tech_light(result["audit"]), yandex_light(result), ai_light(result["geo"])]
+def assess(result: dict, limit: int = 7, paid: dict | None = None) -> Assessment:
+    lights = [tech_light(result["audit"]), yandex_light(paid), ai_light(result["geo"])]
     access = (result.get("checks") or {}).get("access") or {}
     if access.get("verdict") == "stub":
         # Обход видел заглушку, а не сайт: находки по страницам — про заглушку.

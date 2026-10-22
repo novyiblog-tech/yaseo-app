@@ -85,18 +85,39 @@
 
 <section>
   <div class="sec-head"><span class="n">02</span><h2>Спрос</h2></div>
+  {% set dem = (paid or {}).get('demand') %}
+  {% if dem and dem['items'] %}
+  <p class="muted" style="margin-bottom:14px">Сколько раз в месяц эти фразы набирают в Яндексе, по данным Яндекс Вордстата.</p>
+  <table>
+    <tr><th>Фраза</th><th class="num">Ищут раз в месяц</th></tr>
+    {% for it in dem['items'] %}<tr><td>{{ it.query }}</td><td class="num">{{ it.error or it.freq|num }}</td></tr>{% endfor %}
+  </table>
+  {% else %}
   <div class="pending">
-    <h3>В бесплатной проверке не измеряется</h3>
-    <p class="muted">Сколько людей в месяц ищут ваши услуги и какую долю видите вы — считается по данным Вордстата в полном аудите.</p>
+    <h3>{% if paid %}Данных нет{% else %}В бесплатной проверке не измеряется{% endif %}</h3>
+    <p class="muted">{% if paid %}{{ (dem or {}).get('reason') or 'Фразы не заданы или данные Вордстата не получены.' }}{% else %}Сколько людей в месяц ищут ваши услуги и какую долю видите вы: считается по данным Вордстата в полном аудите.{% endif %}</p>
   </div>
+  {% endif %}
 </section>
 
 <section>
   <div class="sec-head"><span class="n">03</span><h2>Позиции и конкуренты</h2></div>
+  {% set pos = (paid or {}).get('positions') %}
+  {% if pos and pos['items'] %}
+  <p class="muted" style="margin-bottom:14px">На каком месте ваш сайт в поиске Яндекса по каждой фразе и кто стоит в самом верху{% if region_label %}. Выдача: {{ region_label }}{% endif %}.</p>
+  <table>
+    <tr><th>Фраза</th><th class="num">Ваше место</th>{% for w in rivals %}<th class="num">{{ w }}</th>{% endfor %}<th>Кто на первых местах</th></tr>
+    {% for it in pos['items'] %}<tr><td>{{ it.query }}</td>
+      <td class="num">{% if it.error %}ошибка{% else %}{{ it.position or 'нет в топ-10' }}{% endif %}</td>
+      {% for w in rivals %}<td class="num muted">{{ (it.watched or {}).get(w) or '—' }}</td>{% endfor %}
+      <td class="muted">{{ (it.top3 or [])|join(', ') }}</td></tr>{% endfor %}
+  </table>
+  {% else %}
   <div class="pending">
-    <h3>В бесплатной проверке не измеряется</h3>
-    <p class="muted">Где сайт стоит в поиске Яндекса по своим запросам и кто стоит выше — снимается в полном аудите.</p>
+    <h3>{% if paid %}Данных нет{% else %}В бесплатной проверке не измеряется{% endif %}</h3>
+    <p class="muted">{% if paid %}{{ (pos or {}).get('reason') or 'Фразы не заданы или выдача не получена.' }}{% else %}Где сайт стоит в поиске Яндекса по своим запросам и кто стоит выше: снимается в полном аудите.{% endif %}</p>
   </div>
+  {% endif %}
 </section>
 
 <section>
@@ -120,6 +141,18 @@
   {% if geo.good %}
   <h3 style="margin:20px 0 8px">Что уже хорошо</h3>
   <div class="issues">{% for g in geo.good %}<div class="issue"><span class="tag" style="justify-self:start">есть</span><span class="small">{{ g }}</span></div>{% endfor %}</div>
+  {% endif %}
+  {% set ans = (paid or {}).get('answers') %}
+  {% if ans and ans['items'] %}
+  <h3 style="margin:24px 0 8px">Упоминает ли вас нейросеть Яндекса</h3>
+  <p class="muted" style="margin-bottom:14px">Называет ли нейросеть Яндекса ваш сайт, когда отвечает на эти фразы, и кого называет вместо вас.</p>
+  <table>
+    <tr><th>Фраза</th><th>Называет вас</th>{% for w in rivals %}<th>{{ w }}</th>{% endfor %}<th>Кого называет вместо вас</th></tr>
+    {% for it in ans['items'] %}<tr><td>{{ it.query }}</td>
+      <td>{% if it.error %}ошибка{% elif it.cited %}да, источник №{{ it.cited_position }}{% else %}нет{% endif %}</td>
+      {% for w in rivals %}<td class="muted">{% if (it.watched or {}).get(w) %}да{% elif it.watched %}нет{% else %}—{% endif %}</td>{% endfor %}
+      <td class="muted">{{ (it.rivals or [])|join(', ') }}</td></tr>{% endfor %}
+  </table>
   {% endif %}
 </section>
 

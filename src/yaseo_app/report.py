@@ -60,6 +60,7 @@ def _env() -> Environment:
     env.filters["short"] = _short
     env.filters["pages_word"] = _pages_word
     env.filters["plural"] = plural
+    env.filters["num"] = lambda v: f"{v:,}".replace(",", "\u00a0") if isinstance(v, int) else v
     return env
 
 
@@ -86,7 +87,8 @@ def _issue_rows(result: dict) -> list[dict]:
 def render(result: dict, assessment: score.Assessment | None = None,
            kind: str = "Бесплатная проверка", max_pages: int = 20,
            back_url: str | None = None, brand: dict | None = None,
-           expand: bool = False) -> str:
+           expand: bool = False, paid: dict | None = None, rivals: list | None = None,
+           region_label: str | None = None) -> str:
     """expand — раскрыть все выпадающие списки (для PDF). brand — свой логотип и контакты вместо знака yaseo: {"name", "contacts", "logo"},
     logo — data:-адрес картинки."""
     a = assessment or score.assess(result)
@@ -111,6 +113,9 @@ def render(result: dict, assessment: score.Assessment | None = None,
         engine=result.get("engine", ""),
         max_pages=max_pages,
         brand=brand,
+        paid=paid,
+        rivals=rivals or [],
+        region_label=region_label,
     )
     return _nbsp_numbers(html)
 

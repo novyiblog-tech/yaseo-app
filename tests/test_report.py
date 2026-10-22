@@ -54,3 +54,24 @@ class ReportTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PaidReportTest(unittest.TestCase):
+    def test_full_audit_shows_paid_sections_instead_of_placeholders(self):
+        result = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        paid = {"demand": {"status": "ok", "items": [{"query": "окна", "freq": 12906}]},
+                "positions": {"status": "ok", "items": [{"query": "окна", "position": 7,
+                                                         "top3": ["a.ru", "b.ru"]}]},
+                "answers": {"status": "ok", "items": [{"query": "окна", "cited": False,
+                                                       "rivals": ["x.ru"]}]}}
+        a = score.assess(result, paid=paid)
+        html = report.render(result, a, kind="Полный аудит", paid=paid)
+        self.assertIn("Полный аудит", html)
+        self.assertNotIn("В бесплатной проверке не измеряется", html)
+        for needle in ("12\u00a0906", "a.ru, b.ru", "Называет вас", "x.ru"):
+            self.assertIn(needle, html)
+
+    def test_free_report_keeps_placeholders(self):
+        html = report.render(json.loads(FIXTURE.read_text(encoding="utf-8")))
+        self.assertIn("В бесплатной проверке не измеряется", html)
+        self.assertIn("Бесплатная проверка", html)
