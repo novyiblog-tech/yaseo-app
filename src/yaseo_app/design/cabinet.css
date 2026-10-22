@@ -155,6 +155,10 @@ tr.row-link:hover .row-go, tr.row-link:focus-within .row-go { color: var(--accen
 @media (max-width: 1000px) { .plans { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 12px; } .plan { scroll-snap-align: start; } .plans-hint { display: block; } }
 .plan { display: flex; flex-direction: column; gap: 12px; padding: 22px; background: var(--glass), var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
 .plan.current { border-color: transparent; box-shadow: var(--glow); }
+/* кабинет: карточки тарифов плотнее, чтобы колонки не вытягивались; лендинг (.l-plans) свой */
+.plans:not(.l-plans) .plan { gap: 8px; padding: 18px; }
+.plans:not(.l-plans) .plan .plain { gap: 3px; margin-top: 4px; line-height: 1.3; font-size: 13px; }
+.plans:not(.l-plans) .plan .term-note { line-height: 1.3; }
 .plan .price { font-family: var(--font-display); font-weight: 900; font-size: 26px; letter-spacing: -0.03em; }
 .plan .price span { font-size: var(--size-small); color: var(--ink-3); font-weight: 600; }
 .plan-foot { margin-top: auto; padding-top: 12px; display: grid; gap: 8px; }
