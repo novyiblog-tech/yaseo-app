@@ -218,13 +218,15 @@
   if (err && err.scrollIntoView) err.scrollIntoView({ block: "center" });
 })();
 
-// «← Назад»: если пришли с нашей же страницы, идём назад по истории (как кнопка браузера),
-// иначе по ссылке на родительский раздел.
+// «← Назад» ведёт в родительский раздел страницы. Если мы пришли оттуда же, возвращаемся по
+// истории, чтобы не плодить записи; иначе просто идём по ссылке. Так «назад» не ходит по кругу
+// между двумя соседними страницами (например, проверка и отчёт).
 (function () {
   Array.prototype.forEach.call(document.querySelectorAll("a.back"), function (a) {
     a.addEventListener("click", function (e) {
-      var ref = document.referrer || "";
-      if (history.length > 1 && ref.indexOf(location.origin) === 0 && ref !== location.href) {
+      var from = null;
+      try { from = document.referrer ? new URL(document.referrer) : null; } catch (err) { from = null; }
+      if (history.length > 1 && from && from.origin === location.origin && from.pathname === a.pathname) {
         e.preventDefault();
         history.back();
       }
