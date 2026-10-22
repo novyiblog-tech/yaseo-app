@@ -23,7 +23,7 @@ RUSSIA = 225
 MAX_ERRORS_IN_ROW = 3
 
 # Порядок важен: Wordstat с часовой квотой первым — если отложимся, то до трат на выдачу.
-SECTIONS = (("demand", "wordstat"), ("positions", "yandex-serp"), ("answers", "yandex-gen"))
+SECTIONS = (("demand", "wordstat"), ("positions", "yandex-serp-sync"), ("answers", "yandex-gen"))
 
 
 class Postpone(Exception):

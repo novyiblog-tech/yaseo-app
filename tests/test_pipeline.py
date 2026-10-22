@@ -47,8 +47,8 @@ class PipelineTest(PgTestCase):
             self.assertEqual(len(r["paid"][section]["items"]), 3)
         by = r["spend"]["by_source"]
         self.assertEqual(by["wordstat"]["calls"], 3)
-        self.assertEqual(by["yandex-serp"]["units"], 3)
-        self.assertAlmostEqual(r["spend"]["cost_rub"], 3 * 0.02 + 3 * 0.0305 + 3 * 5.08, 4)
+        self.assertEqual(by["yandex-serp-sync"]["units"], 3)
+        self.assertAlmostEqual(r["spend"]["cost_rub"], 3 * 0.02 + 3 * 0.488 + 3 * 5.08, 4)
 
     def test_second_run_is_served_from_cache(self):
         self.run_job()
@@ -122,12 +122,23 @@ class LiveWindowTest(PipelineTest):
         self.assertEqual(worker.until_window(datetime(2026, 10, 19, 22, 30, tzinfo=msk)),
                          timedelta(hours=1, minutes=30))
 
-    def test_daytime_job_of_live_user_waits(self):
+    def test_daytime_audit_of_live_user_runs_at_once(self):
         from datetime import timedelta
         from unittest import mock
-        jid = self._enqueue(f"live-{secrets.token_hex(3)}@t")
-        email = self.conn.execute("SELECT u.email FROM jobs j JOIN users u ON u.id = j.user_id"
-                                  " WHERE j.id = %s", (jid,)).fetchone()["email"]
+        email = f"live-{secrets.token_hex(3)}@t"
+        jid = self._enqueue(email)
+        with mock.patch.object(worker, "until_window", return_value=timedelta(hours=5)):
+            worker.run_once(self.conn, "w-test", sources.build("fake"), allow_private=True,
+                            live=sources.build("fake"), live_users={email})
+        self.assertEqual(self.conn.execute("SELECT status FROM jobs WHERE id = %s",
+                                           (jid,)).fetchone()["status"], "done")
+
+    def test_daytime_positions_job_of_live_user_waits(self):
+        from datetime import timedelta
+        from unittest import mock
+        email = f"live-{secrets.token_hex(3)}@t"
+        u = self.user(email, "free")
+        jid = jobs.enqueue(self.conn, u["id"], "positions", {"day": "2026-10-22"})
         with mock.patch.object(worker, "until_window", return_value=timedelta(hours=5)):
             worker.run_once(self.conn, "w-test", sources.build("fake"), allow_private=True,
                             live={"x": object()}, live_users={email})

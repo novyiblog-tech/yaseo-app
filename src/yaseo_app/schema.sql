@@ -59,6 +59,9 @@ INSERT INTO sources (name, title, enabled, price_rub, per_user_daily, service_da
                      rate_per_hour, cache_ttl, note) VALUES
     ('yandex-serp', 'Выдача Яндекса', true, 0.0305, 3500, 5000, NULL, interval '20 hours',
      'отложенный запрос, одна страница выдачи = одно обращение; прайс 16.09.2026'),
+    ('yandex-serp-sync', 'Выдача Яндекса, сразу', true, 0.488, 600, 3000, 10000,
+     interval '20 hours',
+     'синхронный запрос днём, одна страница = одно обращение; клиент ждёт на экране; прайс 22.10.2026'),
     ('wordstat', 'Wordstat', true, 0.020, 200, 100, 100, interval '30 days',
      'квота 100 запросов в час на весь сервис; прайс 16.09.2026'),
     ('yandex-gen', 'Генеративный ответ Яндекса', true, 5.08, 50, 1500, NULL, interval '7 days',

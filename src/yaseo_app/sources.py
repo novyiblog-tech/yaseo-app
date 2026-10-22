@@ -85,8 +85,10 @@ def get(conn: psycopg.Connection, meter: Meter, src: DataSource, params: dict) -
 # --- живые источники ---------------------------------------------------------------
 
 class LiveSerp(DataSource):
-    """Выдача Яндекса. Ключ кэша не зависит от сайта: одна выдача годится всем."""
+    """Выдача Яндекса. Ключ кэша не зависит от сайта: одна выдача годится всем.
+    Отложенный запрос: дёшево, но принимается только в ночном окне 00:00–06:00 МСК."""
     name = "yandex-serp"
+    mode = "async"
 
     def __init__(self, keys: dict):
         self.keys = keys
@@ -101,7 +103,7 @@ class LiveSerp(DataSource):
     def fetch(self, params: dict) -> dict:
         from yaseo import yandex_serp
         res = yandex_serp.serp(params["query"], region=int(params["region"]),
-                               n=params["depth"], env=self.keys)
+                               n=params["depth"], env=self.keys, mode=self.mode)
         if res.error:
             raise SourceError(res.error)
         return {"found": res.found_all,
@@ -155,6 +157,13 @@ class LiveYandexGen(DataSource):
                              "position": s.position} for s in ans.sources]}
 
 
+class LiveSerpSync(LiveSerp):
+    """Та же выдача, но синхронным запросом: сразу и круглые сутки, в разы дороже.
+    Для проверок, которые клиент ждёт на экране; ежедневные позиции идут отложенными."""
+    name = "yandex-serp-sync"
+    mode = "sync"
+
+
 # --- виртуальные источники ----------------------------------------------------------
 
 RIVALS = ("avito.ru", "2gis.ru", "yell.ru", "zoon.ru", "otzovik.com", "pikabu.ru",
@@ -186,6 +195,10 @@ class FakeSerp(LiveSerp):
                 d = rivals[(s + pos) % len(rivals)]
                 docs.append({"pos": pos, "domain": d, "url": f"https://{d}/p{pos}"})
         return {"found": 1000 + s % 90000, "docs": docs}
+
+
+class FakeSerpSync(FakeSerp):
+    name = "yandex-serp-sync"
 
 
 class FakeWordstat(LiveWordstat):
@@ -226,11 +239,12 @@ class FakeYandexGen(LiveYandexGen):
 def build(mode: str, keys: dict | None = None) -> dict[str, DataSource]:
     """mode: fake — виртуальные данные, live — настоящие поставщики по ключам."""
     if mode == "fake":
-        return {s.name: s for s in (FakeSerp(), FakeWordstat(), FakeYandexGen())}
+        return {s.name: s for s in (FakeSerp(), FakeSerpSync(), FakeWordstat(), FakeYandexGen())}
     if mode != "live":
         raise ValueError(f"режим источников «{mode}»: нужен fake или live")
     keys = keys or {}
     missing = [k for k in SEARCH_KEYS if not keys.get(k)]
     if missing:
         raise ValueError("для живых источников нет ключей: " + ", ".join(missing))
-    return {s.name: s for s in (LiveSerp(keys), LiveWordstat(keys), LiveYandexGen(keys))}
+    return {s.name: s for s in (LiveSerp(keys), LiveSerpSync(keys), LiveWordstat(keys),
+                                LiveYandexGen(keys))}

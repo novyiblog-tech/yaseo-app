@@ -67,7 +67,9 @@ def run_once(conn: psycopg.Connection, worker_id: str, srcs: dict,
         return None
     user = conn.execute("SELECT * FROM users WHERE id = %s", (job["user_id"],)).fetchone()
     if live and user["email"].lower() in live_users:
-        wait = until_window()
+        # Проверку клиент ждёт на экране: она идёт синхронно в любое время. Ежедневные
+        # позиции берут дешёвые отложенные запросы, которые принимаются только ночью.
+        wait = until_window() if job["kind"] == "positions" else timedelta(0)
         if wait:
             jobs.postpone(conn, job, wait, "живые данные — в ночном окне 00:00–06:00 МСК")
             log.info("задача %s ждёт ночного окна: %s", job["id"], wait)
