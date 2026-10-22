@@ -13,7 +13,7 @@
       </div>
       <div class="tile-score">
         <span class="score-sm {{ color_of(s.score) }}">{{ s.score if s.score is not none else '—' }}</span>
-        <span class="score-cap">{% if s.score is not none %}из 100<br>оценка сайта{% else %}оценка сайта<br>ещё не посчитана{% endif %}</span>
+        <span class="score-cap">{% if s.score is not none %}из 100{% else %}ещё не посчитана{% endif %}</span>
         {% if s.delta %}<span class="delta {{ 'up' if s.delta > 0 else 'down' }}">{{ '+' if s.delta > 0 }}{{ s.delta }}</span>{% endif %}
         {% if s.spark %}<span class="spark-wrap" title="Оценки последних проверок">{{ s.spark|safe }}<span class="score-cap">динамика оценки</span></span>{% endif %}
       </div>
