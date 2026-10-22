@@ -133,7 +133,7 @@ tr.row-link:hover .row-go, tr.row-link:focus-within .row-go { color: var(--accen
 .tile-url { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tile-score { display: flex; align-items: baseline; gap: 12px; }
 .tile-lights { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--size-small); color: var(--ink-2); }
-.score-cap { font-size: var(--size-micro); line-height: 1.25; color: var(--ink-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.score-cap { white-space: nowrap; font-size: var(--size-micro); line-height: 1.25; color: var(--ink-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 .score-sm { font-family: var(--font-display); font-weight: 800; font-size: 52px; line-height: .9; letter-spacing: -0.05em; }
 .score-xs { font-weight: 800; }
 .score-sm.green, .score-xs.green { color: var(--accent); } .score-sm.yellow, .score-xs.yellow { color: var(--warn); }

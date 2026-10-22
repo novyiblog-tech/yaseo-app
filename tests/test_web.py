@@ -136,6 +136,9 @@ class WebTest(PgTestCase):
         worker.run_once(self.conn, "w-test", sources.build("fake"), allow_private=True)
         r = self.client.get(job_url)
         self.assertIn("Оценка сайта из 100", r.text)
+        site_html = self.client.get(site_url).text  # история проверок сверху, форма новой проверки ниже
+        self.assertIn('id="history"', site_html)
+        self.assertLess(site_html.index('id="history"'), site_html.index("Новая проверка"))
         self.assertIn("виртуальные", r.text)
         self.assertIn("ремонт квартир", r.text)
         self.assertNotIn('http-equiv="refresh"', r.text)

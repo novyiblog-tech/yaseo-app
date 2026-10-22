@@ -24,7 +24,30 @@
   </section>
   {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
   <script src="/running.js" defer></script>
-  {% else %}
+  {% endif %}
+
+  {% if jobs %}
+  <div class="card table-scroll" id="history">
+    <h2>История</h2>
+    <table class="history">
+      <thead><tr><th>Проверка</th><th>Статус</th><th class="num">Оценка</th><th class="num">Фраз</th><th></th></tr></thead>
+      <tbody>
+      {% for j in jobs %}
+        {# вся строка — ссылка на проверку (a::after растянут на строку) #}
+        <tr class="row-link">
+          <td><a href="/jobs/{{ j.id }}" aria-label="Проверка от {{ j.created_at|dt }}">{{ j.created_at|dt }}</a></td>
+          <td><span class="pill {{ j.status }}">{{ STATUS_TITLES[j.status] }}</span>{% if j.sources_mode == 'fake' %} <span class="pill">виртуальные данные</span>{% endif %}</td>
+          <td class="num"><span class="score-xs {{ color_of(j.score) }}">{{ j.score if j.score is not none else '—' }}</span></td>
+          <td class="num muted">{{ j.queries or '—' }}</td>
+          <td class="num row-go" aria-hidden="true">Открыть →</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if not running %}
   <form class="card" method="post" action="/sites/{{ site.id }}/run">
     <input type="hidden" name="csrf" value="{{ user.csrf }}">
     <h2>Новая проверка</h2>
@@ -100,26 +123,6 @@
     {% else %}<p class="muted small">Подключите Яндекс ID, на котором сайт подтверждён в Вебмастере и стоит счётчик Метрики, — покажем настоящие показы, клики и переходы из поиска. <a href="/settings#yandex">Подключить в настройках</a>.</p>{% endif %}
   </section>
 
-  <div class="card table-scroll" id="history">
-    <h2>История</h2>
-    {% if jobs %}
-    <table class="history">
-      <thead><tr><th>Проверка</th><th>Статус</th><th class="num">Оценка</th><th class="num">Фраз</th><th></th></tr></thead>
-      <tbody>
-      {% for j in jobs %}
-        {# вся строка — ссылка на проверку (a::after растянут на строку) #}
-        <tr class="row-link">
-          <td><a href="/jobs/{{ j.id }}" aria-label="Проверка от {{ j.created_at|dt }}">{{ j.created_at|dt }}</a></td>
-          <td><span class="pill {{ j.status }}">{{ STATUS_TITLES[j.status] }}</span>{% if j.sources_mode == 'fake' %} <span class="pill">виртуальные данные</span>{% endif %}</td>
-          <td class="num"><span class="score-xs {{ color_of(j.score) }}">{{ j.score if j.score is not none else '—' }}</span></td>
-          <td class="num muted">{{ j.queries or '—' }}</td>
-          <td class="num row-go" aria-hidden="true">Открыть →</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    {% else %}<p class="muted">Проверок ещё не было.</p>{% endif %}
-  </div>
   <form method="post" action="/sites/{{ site.id }}/delete" onsubmit="return confirm('Удалить сайт из кабинета? Отчёты останутся недоступны.')">
     <input type="hidden" name="csrf" value="{{ user.csrf }}">
     <button class="linkbtn small" type="submit">Удалить сайт из кабинета</button>
