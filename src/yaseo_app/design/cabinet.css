@@ -48,6 +48,8 @@ input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visib
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 13px 24px; border: 0; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); font: inherit; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; font-size: var(--size-small); cursor: pointer; text-decoration: none; }
 .btn:hover { filter: brightness(1.08); }
 .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn.ghost:hover { filter: none; color: var(--accent); border-color: var(--accent); background: rgba(200,255,0,.08); }
+.btn.ghost:active { background: rgba(200,255,0,.16); }
 .linkbtn { background: none; border: 0; color: var(--ink-2); font: inherit; cursor: pointer; padding: 0; }
 .linkbtn:hover { color: var(--ink); }
 .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
