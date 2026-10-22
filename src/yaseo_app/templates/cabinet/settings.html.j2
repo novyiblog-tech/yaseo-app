@@ -77,8 +77,8 @@
     <form method="post" action="/settings/team" style="margin-top:12px">
       <input type="hidden" name="csrf" value="{{ user.csrf }}">
       <div class="field"><label for="member">Почта коллеги</label>
-        <div class="row" style="display:flex;gap:10px;flex-wrap:wrap"><input id="member" type="email" name="email" style="flex:1 1 220px" value="{{ member_email or '' }}">
-        <button class="btn ghost" type="submit">Пригласить</button></div></div>
+        <input id="member" type="email" name="email" value="{{ member_email or '' }}"></div>
+      <p style="margin-top:14px"><button class="btn" type="submit">Пригласить</button></p>
     </form>{% endif %}
     {% if team_error %}<div class="error" role="alert">{{ team_error }}</div>{% endif %}
     {% else %}<p class="muted small">Второй и третий пользователь в том же кабинете.</p>{{ locked('team') }}{% endif %}

@@ -45,11 +45,10 @@ textarea:-webkit-autofill { -webkit-text-fill-color: var(--ink); caret-color: va
 input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; font-size: var(--size-small); color: var(--ink-2); }
 .check input { margin-top: 3px; accent-color: var(--accent); }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 13px 24px; border: 0; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); font: inherit; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; font-size: var(--size-small); cursor: pointer; text-decoration: none; }
-.btn:hover { filter: brightness(1.08); }
-.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
-.btn.ghost:hover { filter: none; color: var(--accent); border-color: var(--accent); background: rgba(200,255,0,.08); }
-.btn.ghost:active { background: rgba(200,255,0,.16); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 13px 24px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); font: inherit; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; font-size: var(--size-small); cursor: pointer; text-decoration: none; transition: background-color .15s, color .15s; }
+/* все кнопки одинаковые: с обводкой, при наведении заливка */
+.btn:hover, .btn.ghost:hover { filter: none; background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: transparent; color: var(--accent); border: 0; }
 .linkbtn { background: none; border: 0; color: var(--ink-2); font: inherit; cursor: pointer; padding: 0; }
 .linkbtn:hover { color: var(--ink); }
 .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
@@ -168,7 +167,6 @@ tr.row-link:hover .row-go, tr.row-link:focus-within .row-go { color: var(--accen
 .plan .price { font-family: var(--font-display); font-weight: 900; font-size: 26px; letter-spacing: -0.03em; }
 .plan .price span { font-size: var(--size-small); color: var(--ink-3); font-weight: 600; }
 .plan-foot { margin-top: auto; padding-top: 12px; display: grid; gap: 8px; }
-.plan .btn.ghost { border: 0; box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); }
 .plan-state { font-size: var(--size-small); color: var(--accent); font-weight: 700; }
 .plan-why { font-size: var(--size-micro); color: var(--ink-2); line-height: 1.4; }
 .plan .term-note { margin-top: -6px; font-size: var(--size-small); color: var(--ink-2); }
@@ -259,8 +257,6 @@ tr.row-link:hover .row-go, tr.row-link:focus-within .row-go { color: var(--accen
 /* filter у .btn:hover сделал бы кнопку опорой для ::after — слой сжался бы до кнопки и клик ушёл мимо */
 .l-plan .btn:hover { filter: none; }
 .l-plan:hover, .l-plan:focus-within { border-color: transparent; box-shadow: var(--glow); transform: translateY(-3px); }
-.l-plan .btn.ghost { color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
-.l-plan:hover .btn.ghost, .l-plan:focus-within .btn.ghost { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 @media (min-width: 1001px) {
   .l-plans { --w: min(1240px, 100vw - 64px); margin-left: calc((100% - var(--w)) / 2); margin-right: calc((100% - var(--w)) / 2); }
 }
