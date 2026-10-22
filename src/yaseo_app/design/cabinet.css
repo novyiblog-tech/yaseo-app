@@ -49,6 +49,9 @@ input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visib
 /* все кнопки одинаковые: с обводкой, при наведении заливка */
 .btn:hover, .btn.ghost:hover { filter: none; background: var(--accent); color: var(--accent-ink); }
 .btn.ghost { background: transparent; color: var(--accent); border: 0; }
+/* главный призыв (кнопка «Проверить бесплатно»): сплошная заливка и в покое */
+.btn.fill, .btn.fill:hover { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+.btn.fill:hover { filter: brightness(1.08); }
 .linkbtn { background: none; border: 0; color: var(--ink-2); font: inherit; cursor: pointer; padding: 0; }
 .linkbtn:hover { color: var(--ink); }
 .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
