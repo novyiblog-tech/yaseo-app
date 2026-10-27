@@ -110,8 +110,11 @@
     {% for it in pos['items'] %}<tr><td class="q">{{ it.query }}</td>
       <td class="num">{% if it.error %}<span class="rank">ошибка</span>{% elif it.position %}<span class="rank {{ 'ok' if it.position <= 3 else ('warn' if it.position <= 10 else 'bad') }}">{{ it.position }}</span>{% else %}<span class="rank bad">нет в топ-10</span>{% endif %}</td>
       {% for w in rivals %}<td class="num muted">{{ (it.watched or {}).get(w) or '—' }}</td>{% endfor %}
-      <td><div class="tops">{% for d in (it.top3 or []) %}<span>{{ d }}</span>{% endfor %}</div></td></tr>{% endfor %}
+      <td><div class="tops">{% for d in (it.top3 or []) %}<span{% if serp_kind(d) != 'обычный' %} class="agg" title="{{ serp_kind(d) }}"{% endif %}>{{ d }}</span>{% endfor %}</div></td></tr>{% endfor %}
   </table>
+  {% if serp_note and serp_note.aggregators %}
+  <p class="serp-note">В первых тройках {{ serp_note.aggregators }} из {{ serp_note.total }} {{ serp_note.total|plural('место', 'места', 'мест') }} занимают агрегаторы и справочники ({{ serp_note.names|join(', ') }}); они подсвечены. По общим фразам обогнать их трудно. Разместите сайт и карточку компании на этих площадках и добавьте уточнённые фразы: с районом, ценой, названием услуги.</p>
+  {% endif %}
   {% else %}
   <div class="pending">
     <h3>{% if paid %}Данных нет{% else %}В бесплатной проверке не измеряется{% endif %}</h3>
@@ -186,6 +189,17 @@
 
 <section>
   <div class="sec-head"><span class="n">05</span><h2>Техника по страницам</h2></div>
+  {% if speed and speed.status == 'ok' %}
+  <div class="speed">
+    <h3>Скорость на телефоне</h3>
+    <div class="speed-row">
+      <div><span class="rank {{ 'ok' if speed.score >= 90 else ('warn' if speed.score >= 50 else 'bad') }}">{{ speed.score }}</span><small>оценка из 100</small></div>
+      {% if speed.lcp_s is not none %}<div><b>{{ speed.lcp_s|string|replace('.', ',') }} с</b><small>главное на странице появляется (хорошо — до 2,5 с)</small></div>{% endif %}
+      {% if speed.cls is not none %}<div><b>{{ speed.cls|string|replace('.', ',') }}</b><small>насколько страница «прыгает» при загрузке (хорошо — до 0,1)</small></div>{% endif %}
+    </div>
+    <p class="muted small">Замер Google PageSpeed для главной страницы, как её открывает телефон. Исправления — в шагах выше, если они нужны.</p>
+  </div>
+  {% endif %}
   <p class="muted" style="margin-bottom:16px">Для специалиста: что увидел робот на каждой проверенной странице.</p>
   <details class="fold"{% if expand %} open{% endif %}>
   <summary>Все находки <span class="muted">— {{ issues|length }}</span></summary>

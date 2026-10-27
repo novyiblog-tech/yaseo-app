@@ -11,7 +11,7 @@ from datetime import timedelta
 
 import psycopg
 
-from yaseo_app import free_audit, sources
+from yaseo_app import free_audit, sources, speed
 from yaseo_app.ledger import Blocked, Meter, RateLimited
 
 SCHEMA = 2
@@ -118,6 +118,13 @@ def _section(conn, meter, src, section, queries, domain, region, limit=None,
     return {"status": status, "items": items, **({"reason": note} if note else {})}
 
 
+def _add_speed(free: dict, url: str) -> None:
+    """Скорость на телефоне — к техническим находкам; если Google не ответил, раздела просто нет."""
+    res = speed.check(url)
+    free.setdefault("checks", {})["speed"] = res
+    free["audit"]["issues"] = (free["audit"].get("issues") or []) + speed.issues(res, url)
+
+
 def run_audit(conn: psycopg.Connection, job: dict, user: dict,
               srcs: dict[str, sources.DataSource], allow_private: bool = False) -> dict:
     p = job["params"]
@@ -126,6 +133,8 @@ def run_audit(conn: psycopg.Connection, job: dict, user: dict,
                                    allow_private=allow_private, exclude=p.get("exclude"),
                                    gentle=bool(p.get("gentle")))
     fake = any(s.fake for s in srcs.values())
+    if not fake and not allow_private:
+        _add_speed(free, url)
     meter = Meter(conn, user["id"], user["plan"], job["id"], fake=fake)
     domain = sources.host(url)
     queries = clean_queries(p.get("queries"))

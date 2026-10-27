@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from yaseo_app import glossary, score
+from yaseo_app import glossary, score, serp_kinds
 
 HERE = Path(__file__).parent
 DESIGN = HERE / "design"
@@ -135,6 +135,11 @@ def _ai_brief(result: dict, paid: dict | None) -> dict:
                        "count": g["count"]} for g in fixes]}
 
 
+def _serp_note(paid: dict | None) -> dict | None:
+    items = (((paid or {}).get("positions") or {}).get("items")) or []
+    return serp_kinds.summarize(items)
+
+
 def render(result: dict, assessment: score.Assessment | None = None,
            kind: str = "Бесплатная проверка", max_pages: int = 20,
            back_url: str | None = None, brand: dict | None = None,
@@ -168,6 +173,9 @@ def render(result: dict, assessment: score.Assessment | None = None,
         rivals=rivals or [],
         region_label=region_label,
         ai=_ai_brief(result, paid),
+        speed=(result.get("checks") or {}).get("speed"),
+        serp_note=_serp_note(paid),
+        serp_kind=serp_kinds.kind,
     )
     return _nbsp_numbers(html)
 
